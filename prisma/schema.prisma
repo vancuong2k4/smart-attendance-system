@@ -1,0 +1,337 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════
+// ORGANIZATION STRUCTURE
+// ═══════════════════════════════════════
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  taxCode   String?
+  address   String?
+  phone     String?
+  email     String?
+  logoUrl   String?
+  timezone  String   @default("Asia/Ho_Chi_Minh")
+  currency  String   @default("VND")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches Branch[]
+}
+
+model Branch {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  code      String
+  address   String?
+  phone     String?
+
+  // GPS Location
+  latitude  Float
+  longitude Float
+  gpsRadius Int     @default(100)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company     Company        @relation(fields: [companyId], references: [id])
+  departments Department[]
+  employees   Employee[]
+  schedules   WorkSchedule[]
+
+  @@unique([companyId, code])
+}
+
+model Department {
+  id        String  @id @default(cuid())
+  branchId  String
+  name      String
+  code      String?
+  managerId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch    Branch     @relation(fields: [branchId], references: [id])
+  employees Employee[]
+}
+
+// ═══════════════════════════════════════
+// USER & EMPLOYEE
+// ═══════════════════════════════════════
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(EMPLOYEE)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  employee Employee?
+  sessions Session[]
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  BRANCH_ADMIN
+  HR_MANAGER
+  EMPLOYEE
+}
+
+model Employee {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  employeeCode String  @unique
+  branchId     String
+  departmentId String
+
+  fullName       String
+  dateOfBirth    DateTime?
+  gender         Gender?
+  phoneNumber    String?
+  address        String?
+  avatarUrl      String?
+  position       String?
+  startDate      DateTime
+  endDate        DateTime?
+  employmentType EmploymentType @default(FULL_TIME)
+
+  annualLeaveBalance Float @default(12)
+  sickLeaveBalance   Float @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user             User               @relation(fields: [userId], references: [id])
+  branch           Branch             @relation(fields: [branchId], references: [id])
+  department       Department         @relation(fields: [departmentId], references: [id])
+  attendances      AttendanceRecord[]
+  leaveRequests    LeaveRequest[]
+  overtimeRequests OvertimeRequest[]
+  notifications    Notification[]
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  PROBATION
+}
+
+// ═══════════════════════════════════════
+// WORK SCHEDULE
+// ═══════════════════════════════════════
+
+model WorkSchedule {
+  id             String  @id @default(cuid())
+  branchId       String
+  name           String
+  startTime      String
+  endTime        String
+  lunchStart     String?
+  lunchEnd       String?
+  workDays       Int[]
+  lateThreshold  Int     @default(15)
+  earlyThreshold Int     @default(15)
+  isDefault      Boolean @default(false)
+  isActive       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id])
+}
+
+// ═══════════════════════════════════════
+// ATTENDANCE
+// ═══════════════════════════════════════
+
+model AttendanceRecord {
+  id               String           @id @default(cuid())
+  employeeId       String
+  date             DateTime         @db.Date
+  checkInTime      DateTime?
+  checkInLat       Float?
+  checkInLon       Float?
+  checkInAccuracy  Float?
+  checkInMethod    AttendanceMethod @default(GPS)
+  checkInDevice    String?
+  checkInPhoto     String?
+  checkOutTime     DateTime?
+  checkOutLat      Float?
+  checkOutLon      Float?
+  checkOutAccuracy Float?
+  checkOutMethod   AttendanceMethod @default(GPS)
+  checkOutDevice   String?
+  workDuration     Float?
+  workDays         Float?
+  isLate           Boolean?
+  lateMinutes      Int?
+  isEarlyLeave     Boolean?
+  earlyMinutes     Int?
+  status           AttendanceStatus @default(PRESENT)
+  note             String?
+  isManualEntry    Boolean          @default(false)
+  approvedById     String?
+  approvedAt       DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([employeeId, date])
+}
+
+enum AttendanceMethod {
+  GPS
+  MANUAL
+  ADMIN_OVERRIDE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LEAVE
+  HOLIDAY
+  WEEKEND
+  HALF_DAY
+}
+
+// ═══════════════════════════════════════
+// LEAVE MANAGEMENT
+// ═══════════════════════════════════════
+
+model LeaveType {
+  id              String  @id @default(cuid())
+  code            String  @unique
+  name            String
+  isPaid          Boolean
+  maxDaysPerYear  Int?
+  requireApproval Boolean @default(true)
+
+  leaveRequests LeaveRequest[]
+}
+
+model LeaveRequest {
+  id            String      @id @default(cuid())
+  employeeId    String
+  leaveTypeId   String
+  startDate     DateTime    @db.Date
+  endDate       DateTime    @db.Date
+  totalDays     Float
+  reason        String?
+  attachmentUrl String?
+  status        LeaveStatus @default(PENDING)
+  approvedById  String?
+  approvedAt    DateTime?
+  rejectReason  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// ═══════════════════════════════════════
+// OVERTIME
+// ═══════════════════════════════════════
+
+model OvertimeRequest {
+  id           String      @id @default(cuid())
+  employeeId   String
+  date         DateTime    @db.Date
+  startTime    String
+  endTime      String
+  hours        Float
+  reason       String?
+  status       LeaveStatus @default(PENDING)
+  approvedById String?
+  approvedAt   DateTime?
+  rejectReason String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+}
+
+// ═══════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════
+
+model Notification {
+  id         String   @id @default(cuid())
+  employeeId String
+  type       String
+  title      String
+  message    String
+  isRead     Boolean  @default(false)
+  link       String?
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId, isRead])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  oldData   Json?
+  newData   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}

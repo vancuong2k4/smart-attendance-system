@@ -1,3 +1,12 @@
 allowBuilds:
+  esbuild: true
   sharp: false
   unrs-resolver: false
+permissions:
+  '@prisma/client':
+    build: true
+  '@prisma/engines':
+    build: true
+  prisma:
+    build: true
+    skills: true
