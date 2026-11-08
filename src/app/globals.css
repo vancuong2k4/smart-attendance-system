@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Leaflet Custom DivIcon reset */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}

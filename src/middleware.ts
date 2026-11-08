@@ -11,6 +11,7 @@ const roleRoutes: Record<string, string[]> = {
   '/settings/company': ['SUPER_ADMIN'],
   '/reports': ['SUPER_ADMIN', 'HR_MANAGER', 'BRANCH_ADMIN'],
   '/employees': ['SUPER_ADMIN', 'HR_MANAGER', 'BRANCH_ADMIN'],
+  '/attendance/manage': ['SUPER_ADMIN', 'HR_MANAGER', 'BRANCH_ADMIN'],
 }
 
 export default auth((req: any) => {
@@ -25,8 +26,14 @@ export default auth((req: any) => {
     return NextResponse.next()
   }
 
-  // Chưa đăng nhập → redirect về login
+  // Chưa đăng nhập → API trả về 401, Web redirect về login
   if (!session) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { success: false, error: 'UNAUTHORIZED', message: 'Vui lòng đăng nhập' },
+        { status: 401 }
+      )
+    }
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)

@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
     href: '/attendance',
     label: 'Chấm công',
     icon: <Clock size={18} />,
-    roles: ['EMPLOYEE'],
+    roles: ['EMPLOYEE', 'SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER'],
   },
   {
     href: '/attendance/manage',
@@ -99,7 +99,15 @@ export default function DashboardSidebar({ userRole }: { userRole: string }) {
       {/* Nav */}
       <nav className="flex-1 py-4 px-2 space-y-1">
         {filteredItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const hasMoreSpecificMatch = filteredItems.some(
+            (other) =>
+              other.href !== item.href &&
+              other.href.startsWith(item.href + '/') &&
+              (pathname === other.href || pathname.startsWith(other.href + '/'))
+          )
+          const isActive =
+            pathname === item.href ||
+            (pathname.startsWith(item.href + '/') && !hasMoreSpecificMatch)
           return (
             <Link
               key={item.href}

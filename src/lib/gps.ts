@@ -89,55 +89,61 @@ export function validateGpsLocation(
 }
 
 /**
- * Kiểm tra thời gian có hợp lệ để check-in không (06:00 - 10:00)
+ * Chuyển đổi timestamp sang Date biểu diễn thời gian Việt Nam (UTC+7)
+ */
+function toVietnamDateParts(date: Date) {
+  const vn = new Date(date.getTime() + 7 * 60 * 60 * 1000)
+  return {
+    hours: vn.getUTCHours(),
+    minutes: vn.getUTCMinutes(),
+    seconds: vn.getUTCSeconds(),
+  }
+}
+
+/**
+ * Kiểm tra thời gian có hợp lệ để check-in không (06:00 - 10:00) theo giờ Việt Nam
  */
 export function isWithinCheckInWindow(now: Date = new Date()): boolean {
-  const hours = now.getHours()
-  const minutes = now.getMinutes()
+  const { hours, minutes } = toVietnamDateParts(now)
   const totalMinutes = hours * 60 + minutes
-  return totalMinutes >= 6 * 60 && totalMinutes <= 10 * 60 // 06:00 - 10:00
+  return totalMinutes >= 6 * 60 && totalMinutes <= 10 * 60 // 06:00 - 10:00 VN
 }
 
 /**
- * Kiểm tra thời gian có hợp lệ để check-out không (11:00 - 22:00)
+ * Kiểm tra thời gian có hợp lệ để check-out không (11:00 - 22:00) theo giờ Việt Nam
  */
 export function isWithinCheckOutWindow(now: Date = new Date()): boolean {
-  const hours = now.getHours()
-  const minutes = now.getMinutes()
+  const { hours, minutes } = toVietnamDateParts(now)
   const totalMinutes = hours * 60 + minutes
-  return totalMinutes >= 11 * 60 && totalMinutes <= 22 * 60 // 11:00 - 22:00
+  return totalMinutes >= 11 * 60 && totalMinutes <= 22 * 60 // 11:00 - 22:00 VN
 }
 
 /**
- * Tính số phút đi muộn so với giờ bắt đầu
+ * Tính số phút đi muộn so với giờ bắt đầu theo giờ Việt Nam
  * @param checkInTime - Thời gian check-in thực tế
  * @param scheduleStart - Giờ bắt đầu dạng "08:00"
  * @returns Số phút muộn (0 nếu đúng giờ hoặc sớm)
  */
 export function calculateLateMinutes(checkInTime: Date, scheduleStart: string): number {
   const [startHour, startMin] = scheduleStart.split(':').map(Number)
-  const scheduleDate = new Date(checkInTime)
-  scheduleDate.setHours(startHour, startMin, 0, 0)
-
-  const diffMs = checkInTime.getTime() - scheduleDate.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  return Math.max(0, diffMin)
+  const { hours, minutes } = toVietnamDateParts(checkInTime)
+  const checkInMinutes = hours * 60 + minutes
+  const startMinutes = startHour * 60 + startMin
+  return Math.max(0, checkInMinutes - startMinutes)
 }
 
 /**
- * Tính số phút về sớm so với giờ kết thúc
+ * Tính số phút về sớm so với giờ kết thúc theo giờ Việt Nam
  * @param checkOutTime - Thời gian check-out thực tế
  * @param scheduleEnd - Giờ kết thúc dạng "17:00"
  * @returns Số phút về sớm (0 nếu đúng giờ hoặc muộn)
  */
 export function calculateEarlyLeaveMinutes(checkOutTime: Date, scheduleEnd: string): number {
   const [endHour, endMin] = scheduleEnd.split(':').map(Number)
-  const scheduleDate = new Date(checkOutTime)
-  scheduleDate.setHours(endHour, endMin, 0, 0)
-
-  const diffMs = scheduleDate.getTime() - checkOutTime.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  return Math.max(0, diffMin)
+  const { hours, minutes } = toVietnamDateParts(checkOutTime)
+  const checkOutMinutes = hours * 60 + minutes
+  const endMinutes = endHour * 60 + endMin
+  return Math.max(0, endMinutes - checkOutMinutes)
 }
 
 /**
