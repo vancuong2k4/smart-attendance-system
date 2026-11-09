@@ -62,25 +62,49 @@ export const createEmployeeSchema = z.object({
 })
 
 // ==========================================
+// ==========================================
 // LEAVE SCHEMAS
 // ==========================================
 
 export const createLeaveRequestSchema = z
   .object({
-    leaveTypeId: z.string().cuid(),
-    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    totalDays: z.number().positive().max(365),
-    reason: z.string().max(1000).optional(),
+    leaveTypeId: z.string().min(1, 'Vui lòng chọn loại nghỉ phép'),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày bắt đầu phải theo định dạng YYYY-MM-DD'),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày kết thúc phải theo định dạng YYYY-MM-DD'),
+    totalDays: z.number().positive('Số ngày nghỉ phải lớn hơn 0').max(365, 'Số ngày nghỉ tối đa 365 ngày'),
+    reason: z.string().max(1000, 'Lý do tối đa 1000 ký tự').optional(),
+    attachmentUrl: z.string().max(500).optional(),
   })
-  .refine((data) => new Date(data.startDate) <= new Date(data.endDate), {
-    message: 'Ngày kết thúc phải sau ngày bắt đầu',
+  .refine((data) => data.startDate <= data.endDate, {
+    message: 'Ngày kết thúc phải sau hoặc cùng ngày bắt đầu',
     path: ['endDate'],
   })
 
 export const approveLeaveSchema = z.object({
   action: z.enum(['APPROVED', 'REJECTED']),
-  rejectReason: z.string().max(500).optional(),
+  rejectReason: z.string().max(500, 'Lý do từ chối tối đa 500 ký tự').optional(),
+})
+
+// ==========================================
+// OVERTIME SCHEMAS
+// ==========================================
+
+export const createOvertimeRequestSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày làm thêm phải theo định dạng YYYY-MM-DD'),
+    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Giờ bắt đầu phải theo định dạng HH:mm'),
+    endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Giờ kết thúc phải theo định dạng HH:mm'),
+    hours: z.number().positive('Số giờ làm thêm phải lớn hơn 0').max(24, 'Số giờ làm thêm tối đa 24 giờ'),
+    reason: z.string().max(1000, 'Lý do tối đa 1000 ký tự').optional(),
+  })
+  .refine((data) => data.startTime < data.endTime, {
+    message: 'Giờ kết thúc phải sau giờ bắt đầu',
+    path: ['endTime'],
+  })
+
+export const approveOvertimeSchema = z.object({
+  action: z.enum(['APPROVED', 'REJECTED']),
+  rejectReason: z.string().max(500, 'Lý do từ chối tối đa 500 ký tự').optional(),
 })
 
 // ==========================================
@@ -102,4 +126,7 @@ export type LoginInput = z.infer<typeof loginSchema>
 export type CheckInInput = z.infer<typeof checkInSchema>
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>
 export type CreateLeaveRequestInput = z.infer<typeof createLeaveRequestSchema>
+export type ApproveLeaveInput = z.infer<typeof approveLeaveSchema>
+export type CreateOvertimeInput = z.infer<typeof createOvertimeRequestSchema>
+export type ApproveOvertimeInput = z.infer<typeof approveOvertimeSchema>
 export type CreateBranchInput = z.infer<typeof createBranchSchema>
