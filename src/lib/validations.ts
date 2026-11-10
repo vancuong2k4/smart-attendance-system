@@ -122,6 +122,19 @@ export const createBranchSchema = z.object({
   gpsRadius: z.number().int().min(50).max(1000).default(100),
 })
 
+// ==========================================
+// NOTIFICATION SCHEMAS
+// ==========================================
+
+export const updateNotificationSchema = z
+  .object({
+    id: z.string().optional(),
+    markAllAsRead: z.boolean().optional(),
+  })
+  .refine((data) => data.id !== undefined || data.markAllAsRead === true, {
+    message: 'Phải cung cấp id hoặc markAllAsRead = true',
+  })
+
 export type LoginInput = z.infer<typeof loginSchema>
 export type CheckInInput = z.infer<typeof checkInSchema>
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>
@@ -130,3 +143,4 @@ export type ApproveLeaveInput = z.infer<typeof approveLeaveSchema>
 export type CreateOvertimeInput = z.infer<typeof createOvertimeRequestSchema>
 export type ApproveOvertimeInput = z.infer<typeof approveOvertimeSchema>
 export type CreateBranchInput = z.infer<typeof createBranchSchema>
+export type UpdateNotificationInput = z.infer<typeof updateNotificationSchema>

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { parseDateOnly, isValidDateString } from '@/lib/attendance'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { createLeaveRequestSchema } from '@/lib/validations'
+import { notifyLeaveSubmitted } from '@/lib/notifications'
 import { LeaveStatus, Prisma, UserRole } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
@@ -224,6 +225,7 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         fullName: true,
+        branchId: true,
         annualLeaveBalance: true,
         sickLeaveBalance: true,
       },
@@ -291,10 +293,23 @@ export async function POST(req: NextRequest) {
             id: true,
             fullName: true,
             employeeCode: true,
+            branchId: true,
             annualLeaveBalance: true,
           },
         },
       },
+    })
+
+    // Thông báo cho Branch Admin & HR Manager
+    await notifyLeaveSubmitted({
+      employeeId,
+      employeeName: employee?.fullName || leaveRequest?.employee?.fullName || 'Nhân viên',
+      branchId: employee?.branchId || leaveRequest?.employee?.branchId || '',
+      leaveId: leaveRequest.id,
+      startDate: leaveRequest.startDate,
+      endDate: leaveRequest.endDate,
+      totalDays: leaveRequest.totalDays,
+      leaveTypeName: leaveType?.name || leaveRequest?.leaveType?.name || 'phép',
     })
 
     return successResponse(leaveRequest, 201)

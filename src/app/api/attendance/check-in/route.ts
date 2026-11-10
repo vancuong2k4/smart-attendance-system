@@ -10,6 +10,7 @@ import {
   calculateAttendanceCheckIn,
 } from '@/lib/attendance'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
+import { notifyCheckInSuccess } from '@/lib/notifications'
 
 export async function POST(req: NextRequest) {
   try {
@@ -146,6 +147,14 @@ export async function POST(req: NextRequest) {
     })
 
     const timeFormatted = formatVietnamTime(record.checkInTime)
+
+    // Tạo thông báo ghi nhận chấm công
+    await notifyCheckInSuccess({
+      employeeId: employee.id,
+      checkInTime: record.checkInTime,
+      isLate: record.isLate,
+      lateMinutes: record.lateMinutes,
+    })
 
     return successResponse({
       id: record.id,

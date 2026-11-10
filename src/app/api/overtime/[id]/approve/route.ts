@@ -5,6 +5,7 @@ import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { approveOvertimeSchema } from '@/lib/validations'
 import { canApproveRequests } from '@/lib/rbac'
 import { LeaveStatus, UserRole } from '@prisma/client'
+import { notifyOvertimeDecision } from '@/lib/notifications'
 
 export async function PATCH(
   req: NextRequest,
@@ -93,19 +94,16 @@ export async function PATCH(
         },
       })
 
-      await tx.notification.create({
-        data: {
+      await notifyOvertimeDecision(
+        {
           employeeId: otRequest.employeeId,
-          type: action === 'APPROVED' ? 'OT_APPROVED' : 'OT_REJECTED',
-          title: action === 'APPROVED' ? 'Yêu cầu OT đã được duyệt' : 'Yêu cầu OT bị từ chối',
-          message:
-            action === 'APPROVED'
-              ? `Yêu cầu làm thêm giờ ngày ${otRequest.date.toISOString().slice(0, 10)} (${otRequest.hours}h) đã được duyệt.`
-              : `Yêu cầu làm thêm giờ ngày ${otRequest.date.toISOString().slice(0, 10)} đã bị từ chối.${
-                  rejectReason ? ` Lý do: ${rejectReason}` : ''
-                }`,
+          action,
+          date: otRequest.date,
+          hours: otRequest.hours,
+          rejectReason,
         },
-      })
+        tx
+      )
 
       return updated
     })

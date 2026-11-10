@@ -491,10 +491,10 @@ export default function LeavesPage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
+        <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto pb-px">
           <button
             onClick={() => setActiveTab('my-leaves')}
-            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === 'my-leaves'
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -506,7 +506,7 @@ export default function LeavesPage() {
 
           <button
             onClick={() => setActiveTab('my-ot')}
-            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 shrink-0 ${
               activeTab === 'my-ot'
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -519,7 +519,7 @@ export default function LeavesPage() {
           {canApprove && (
             <button
               onClick={() => setActiveTab('approval')}
-              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 shrink-0 ${
                 activeTab === 'approval'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -559,64 +559,110 @@ export default function LeavesPage() {
               <p>Bạn chưa có đơn xin nghỉ phép nào</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-600">
-                <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3">Loại nghỉ</th>
-                    <th className="px-6 py-3">Từ ngày</th>
-                    <th className="px-6 py-3">Đến ngày</th>
-                    <th className="px-6 py-3">Số ngày</th>
-                    <th className="px-6 py-3">Lý do</th>
-                    <th className="px-6 py-3">Trạng thái</th>
-                    <th className="px-6 py-3 text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {myLeaves.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50/60">
-                      <td className="px-6 py-4 font-medium text-gray-900">
+            <>
+              {/* Mobile Cards View (md:hidden) */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {myLeaves.map((item) => (
+                  <div key={item.id} className="p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-900 text-sm">
                         {item.leaveType?.name || 'Nghỉ phép'}
-                        {item.leaveType?.isPaid ? (
-                          <span className="ml-2 text-xs text-green-600 font-normal">
-                            (Có lương)
-                          </span>
-                        ) : (
-                          <span className="ml-2 text-xs text-gray-400 font-normal">
-                            (Không lương)
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">{formatVietnamDateDisplay(item.startDate)}</td>
-                      <td className="px-6 py-4">{formatVietnamDateDisplay(item.endDate)}</td>
-                      <td className="px-6 py-4 font-semibold text-gray-800">{item.totalDays}</td>
-                      <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
-                        {item.reason || '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={item.status} />
-                        {item.rejectReason && (
-                          <p className="text-xs text-red-500 mt-1 italic truncate max-w-xs">
-                            {item.rejectReason}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {item.status === 'PENDING' && (
-                          <button
-                            onClick={() => handleCancelRequest(item.id, 'leave')}
-                            className="text-red-600 hover:text-red-800 text-xs font-medium inline-flex items-center gap-1"
-                          >
-                            <Trash2 size={14} />
-                            <span>Hủy đơn</span>
-                          </button>
-                        )}
-                      </td>
+                      </span>
+                      <StatusBadge status={item.status} />
+                    </div>
+                    <div className="text-xs text-gray-600 flex items-center justify-between">
+                      <span>
+                        {formatVietnamDateDisplay(item.startDate)} – {formatVietnamDateDisplay(item.endDate)}
+                      </span>
+                      <span className="font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
+                        {item.totalDays} ngày
+                      </span>
+                    </div>
+                    {item.reason && (
+                      <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                        {item.reason}
+                      </p>
+                    )}
+                    {item.rejectReason && (
+                      <p className="text-xs text-red-500 italic bg-red-50 p-2 rounded-lg">
+                        Lý do từ chối: {item.rejectReason}
+                      </p>
+                    )}
+                    {item.status === 'PENDING' && (
+                      <div className="pt-1 flex justify-end">
+                        <button
+                          onClick={() => handleCancelRequest(item.id, 'leave')}
+                          className="text-red-600 hover:text-red-800 text-xs font-medium inline-flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg transition"
+                        >
+                          <Trash2 size={13} />
+                          <span>Hủy đơn</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View (hidden md:block) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-600">
+                  <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3">Loại nghỉ</th>
+                      <th className="px-6 py-3">Từ ngày</th>
+                      <th className="px-6 py-3">Đến ngày</th>
+                      <th className="px-6 py-3">Số ngày</th>
+                      <th className="px-6 py-3">Lý do</th>
+                      <th className="px-6 py-3">Trạng thái</th>
+                      <th className="px-6 py-3 text-right">Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {myLeaves.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50/60">
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          {item.leaveType?.name || 'Nghỉ phép'}
+                          {item.leaveType?.isPaid ? (
+                            <span className="ml-2 text-xs text-green-600 font-normal">
+                              (Có lương)
+                            </span>
+                          ) : (
+                            <span className="ml-2 text-xs text-gray-400 font-normal">
+                              (Không lương)
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">{formatVietnamDateDisplay(item.startDate)}</td>
+                        <td className="px-6 py-4">{formatVietnamDateDisplay(item.endDate)}</td>
+                        <td className="px-6 py-4 font-semibold text-gray-800">{item.totalDays}</td>
+                        <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
+                          {item.reason || '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <StatusBadge status={item.status} />
+                          {item.rejectReason && (
+                            <p className="text-xs text-red-500 mt-1 italic truncate max-w-xs">
+                              {item.rejectReason}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {item.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleCancelRequest(item.id, 'leave')}
+                              className="text-red-600 hover:text-red-800 text-xs font-medium inline-flex items-center gap-1"
+                            >
+                              <Trash2 size={14} />
+                              <span>Hủy đơn</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -643,55 +689,101 @@ export default function LeavesPage() {
               <p>Bạn chưa có yêu cầu làm thêm giờ nào</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-600">
-                <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3">Ngày làm</th>
-                    <th className="px-6 py-3">Khung giờ</th>
-                    <th className="px-6 py-3">Số giờ OT</th>
-                    <th className="px-6 py-3">Lý do</th>
-                    <th className="px-6 py-3">Trạng thái</th>
-                    <th className="px-6 py-3 text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {myOts.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50/60">
-                      <td className="px-6 py-4 font-medium text-gray-900">
-                        {formatVietnamDateDisplay(item.date)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {item.startTime} – {item.endTime}
-                      </td>
-                      <td className="px-6 py-4 font-semibold text-indigo-600">{item.hours}h</td>
-                      <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
-                        {item.reason || '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={item.status} />
-                        {item.rejectReason && (
-                          <p className="text-xs text-red-500 mt-1 italic truncate max-w-xs">
-                            {item.rejectReason}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {item.status === 'PENDING' && (
-                          <button
-                            onClick={() => handleCancelRequest(item.id, 'ot')}
-                            className="text-red-600 hover:text-red-800 text-xs font-medium inline-flex items-center gap-1"
-                          >
-                            <Trash2 size={14} />
-                            <span>Hủy đơn</span>
-                          </button>
-                        )}
-                      </td>
+            <>
+              {/* Mobile Cards View (md:hidden) */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {myOts.map((item) => (
+                  <div key={item.id} className="p-4 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-gray-900 text-sm">
+                        Làm thêm giờ (OT)
+                      </span>
+                      <StatusBadge status={item.status} />
+                    </div>
+                    <div className="text-xs text-gray-600 flex items-center justify-between">
+                      <span>
+                        {formatVietnamDateDisplay(item.date)} ({item.startTime} – {item.endTime})
+                      </span>
+                      <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                        {item.hours}h
+                      </span>
+                    </div>
+                    {item.reason && (
+                      <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                        {item.reason}
+                      </p>
+                    )}
+                    {item.rejectReason && (
+                      <p className="text-xs text-red-500 italic bg-red-50 p-2 rounded-lg">
+                        Lý do từ chối: {item.rejectReason}
+                      </p>
+                    )}
+                    {item.status === 'PENDING' && (
+                      <div className="pt-1 flex justify-end">
+                        <button
+                          onClick={() => handleCancelRequest(item.id, 'ot')}
+                          className="text-red-600 hover:text-red-800 text-xs font-medium inline-flex items-center gap-1 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg transition"
+                        >
+                          <Trash2 size={13} />
+                          <span>Hủy đơn</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View (hidden md:block) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-600">
+                  <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3">Ngày làm</th>
+                      <th className="px-6 py-3">Khung giờ</th>
+                      <th className="px-6 py-3">Số giờ OT</th>
+                      <th className="px-6 py-3">Lý do</th>
+                      <th className="px-6 py-3">Trạng thái</th>
+                      <th className="px-6 py-3 text-right">Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {myOts.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50/60">
+                        <td className="px-6 py-4 font-medium text-gray-900">
+                          {formatVietnamDateDisplay(item.date)}
+                        </td>
+                        <td className="px-6 py-4">
+                          {item.startTime} – {item.endTime}
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-indigo-600">{item.hours}h</td>
+                        <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
+                          {item.reason || '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <StatusBadge status={item.status} />
+                          {item.rejectReason && (
+                            <p className="text-xs text-red-500 mt-1 italic truncate max-w-xs">
+                              {item.rejectReason}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {item.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleCancelRequest(item.id, 'ot')}
+                              className="text-red-600 hover:text-red-800 text-xs font-medium inline-flex items-center gap-1"
+                            >
+                              <Trash2 size={14} />
+                              <span>Hủy đơn</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -723,66 +815,117 @@ export default function LeavesPage() {
                 <p>Không có đơn xin nghỉ phép nào đang chờ duyệt</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-600">
-                  <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3">Nhân viên</th>
-                      <th className="px-6 py-3">Phòng ban</th>
-                      <th className="px-6 py-3">Loại nghỉ</th>
-                      <th className="px-6 py-3">Thời gian</th>
-                      <th className="px-6 py-3">Số ngày</th>
-                      <th className="px-6 py-3">Lý do</th>
-                      <th className="px-6 py-3 text-right">Xét duyệt</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {pendingLeaves.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50/60">
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-gray-900">{item.employee.fullName}</p>
-                          <p className="text-xs text-gray-400">{item.employee.employeeCode}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.employee.department?.name || '—'}
-                          <p className="text-xs text-gray-400">{item.employee.branch?.name}</p>
-                        </td>
-                        <td className="px-6 py-4 font-medium text-gray-900">
+              <>
+                {/* Mobile Cards for Pending Leaves (md:hidden) */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {pendingLeaves.map((item) => (
+                    <div key={item.id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">{item.employee.fullName}</p>
+                          <p className="text-xs text-gray-400">
+                            {item.employee.employeeCode} • {item.employee.department?.name || item.employee.branch?.name}
+                          </p>
+                        </div>
+                        <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md">
                           {item.leaveType?.name}
-                        </td>
-                        <td className="px-6 py-4">
-                          {formatVietnamDateDisplay(item.startDate)} –{' '}
-                          {formatVietnamDateDisplay(item.endDate)}
-                        </td>
-                        <td className="px-6 py-4 font-semibold text-gray-800">{item.totalDays}</td>
-                        <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
-                          {item.reason || '—'}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              onClick={() => handleApprove(item.id, 'leave')}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition flex items-center gap-1 shadow-xs"
-                            >
-                              <Check size={14} />
-                              <span>Duyệt</span>
-                            </button>
-                            <button
-                              onClick={() => setRejectModalData({ id: item.id, type: 'leave' })}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-white border border-red-300 text-red-600 hover:bg-red-50 rounded text-xs font-medium transition flex items-center gap-1"
-                            >
-                              <X size={14} />
-                              <span>Từ chối</span>
-                            </button>
-                          </div>
-                        </td>
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-600 flex items-center justify-between">
+                        <span>
+                          {formatVietnamDateDisplay(item.startDate)} – {formatVietnamDateDisplay(item.endDate)}
+                        </span>
+                        <span className="font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                          {item.totalDays} ngày
+                        </span>
+                      </div>
+                      {item.reason && (
+                        <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                          {item.reason}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => handleApprove(item.id, 'leave')}
+                          disabled={actionLoading}
+                          className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 shadow-xs"
+                        >
+                          <Check size={14} /> Duyệt đơn
+                        </button>
+                        <button
+                          onClick={() => setRejectModalData({ id: item.id, type: 'leave' })}
+                          disabled={actionLoading}
+                          className="flex-1 py-2 bg-white border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1"
+                        >
+                          <X size={14} /> Từ chối
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View (hidden md:block) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-600">
+                    <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3">Nhân viên</th>
+                        <th className="px-6 py-3">Phòng ban</th>
+                        <th className="px-6 py-3">Loại nghỉ</th>
+                        <th className="px-6 py-3">Thời gian</th>
+                        <th className="px-6 py-3">Số ngày</th>
+                        <th className="px-6 py-3">Lý do</th>
+                        <th className="px-6 py-3 text-right">Xét duyệt</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {pendingLeaves.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/60">
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-gray-900">{item.employee.fullName}</p>
+                            <p className="text-xs text-gray-400">{item.employee.employeeCode}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            {item.employee.department?.name || '—'}
+                            <p className="text-xs text-gray-400">{item.employee.branch?.name}</p>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {item.leaveType?.name}
+                          </td>
+                          <td className="px-6 py-4">
+                            {formatVietnamDateDisplay(item.startDate)} –{' '}
+                            {formatVietnamDateDisplay(item.endDate)}
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-gray-800">{item.totalDays}</td>
+                          <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
+                            {item.reason || '—'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                onClick={() => handleApprove(item.id, 'leave')}
+                                disabled={actionLoading}
+                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition flex items-center gap-1 shadow-xs"
+                              >
+                                <Check size={14} />
+                                <span>Duyệt</span>
+                              </button>
+                              <button
+                                onClick={() => setRejectModalData({ id: item.id, type: 'leave' })}
+                                disabled={actionLoading}
+                                className="px-3 py-1 bg-white border border-red-300 text-red-600 hover:bg-red-50 rounded text-xs font-medium transition flex items-center gap-1"
+                              >
+                                <X size={14} />
+                                <span>Từ chối</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
 
@@ -803,65 +946,112 @@ export default function LeavesPage() {
                 <p>Không có yêu cầu OT nào đang chờ duyệt</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-600">
-                  <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3">Nhân viên</th>
-                      <th className="px-6 py-3">Phòng ban</th>
-                      <th className="px-6 py-3">Ngày làm</th>
-                      <th className="px-6 py-3">Khung giờ</th>
-                      <th className="px-6 py-3">Số giờ OT</th>
-                      <th className="px-6 py-3">Lý do</th>
-                      <th className="px-6 py-3 text-right">Xét duyệt</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {pendingOts.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50/60">
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-gray-900">{item.employee.fullName}</p>
-                          <p className="text-xs text-gray-400">{item.employee.employeeCode}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.employee.department?.name || '—'}
-                          <p className="text-xs text-gray-400">{item.employee.branch?.name}</p>
-                        </td>
-                        <td className="px-6 py-4 font-medium text-gray-900">
-                          {formatVietnamDateDisplay(item.date)}
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.startTime} – {item.endTime}
-                        </td>
-                        <td className="px-6 py-4 font-semibold text-purple-600">{item.hours}h</td>
-                        <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
-                          {item.reason || '—'}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              onClick={() => handleApprove(item.id, 'ot')}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition flex items-center gap-1 shadow-xs"
-                            >
-                              <Check size={14} />
-                              <span>Duyệt</span>
-                            </button>
-                            <button
-                              onClick={() => setRejectModalData({ id: item.id, type: 'ot' })}
-                              disabled={actionLoading}
-                              className="px-3 py-1 bg-white border border-red-300 text-red-600 hover:bg-red-50 rounded text-xs font-medium transition flex items-center gap-1"
-                            >
-                              <X size={14} />
-                              <span>Từ chối</span>
-                            </button>
-                          </div>
-                        </td>
+              <>
+                {/* Mobile Cards for Pending OTs (md:hidden) */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {pendingOts.map((item) => (
+                    <div key={item.id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">{item.employee.fullName}</p>
+                          <p className="text-xs text-gray-400">
+                            {item.employee.employeeCode} • {item.employee.department?.name || item.employee.branch?.name}
+                          </p>
+                        </div>
+                        <span className="text-xs font-semibold px-2 py-0.5 bg-purple-50 text-purple-700 rounded-md">
+                          {item.hours}h OT
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-600 flex items-center justify-between">
+                        <span>{formatVietnamDateDisplay(item.date)}</span>
+                        <span className="font-medium text-gray-700">{item.startTime} – {item.endTime}</span>
+                      </div>
+                      {item.reason && (
+                        <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                          {item.reason}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => handleApprove(item.id, 'ot')}
+                          disabled={actionLoading}
+                          className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 shadow-xs"
+                        >
+                          <Check size={14} /> Duyệt OT
+                        </button>
+                        <button
+                          onClick={() => setRejectModalData({ id: item.id, type: 'ot' })}
+                          disabled={actionLoading}
+                          className="flex-1 py-2 bg-white border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1"
+                        >
+                          <X size={14} /> Từ chối
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View (hidden md:block) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-sm text-gray-600">
+                    <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3">Nhân viên</th>
+                        <th className="px-6 py-3">Phòng ban</th>
+                        <th className="px-6 py-3">Ngày làm</th>
+                        <th className="px-6 py-3">Khung giờ</th>
+                        <th className="px-6 py-3">Số giờ OT</th>
+                        <th className="px-6 py-3">Lý do</th>
+                        <th className="px-6 py-3 text-right">Xét duyệt</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {pendingOts.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/60">
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-gray-900">{item.employee.fullName}</p>
+                            <p className="text-xs text-gray-400">{item.employee.employeeCode}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            {item.employee.department?.name || '—'}
+                            <p className="text-xs text-gray-400">{item.employee.branch?.name}</p>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-gray-900">
+                            {formatVietnamDateDisplay(item.date)}
+                          </td>
+                          <td className="px-6 py-4">
+                            {item.startTime} – {item.endTime}
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-purple-600">{item.hours}h</td>
+                          <td className="px-6 py-4 max-w-xs truncate" title={item.reason || ''}>
+                            {item.reason || '—'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                onClick={() => handleApprove(item.id, 'ot')}
+                                disabled={actionLoading}
+                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition flex items-center gap-1 shadow-xs"
+                              >
+                                <Check size={14} />
+                                <span>Duyệt</span>
+                              </button>
+                              <button
+                                onClick={() => setRejectModalData({ id: item.id, type: 'ot' })}
+                                disabled={actionLoading}
+                                className="px-3 py-1 bg-white border border-red-300 text-red-600 hover:bg-red-50 rounded text-xs font-medium transition flex items-center gap-1"
+                              >
+                                <X size={14} />
+                                <span>Từ chối</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -869,8 +1059,8 @@ export default function LeavesPage() {
 
       {/* Modal nộp đơn xin nghỉ phép */}
       {isLeaveModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">Nộp đơn xin nghỉ phép</h2>
               <button
@@ -975,8 +1165,8 @@ export default function LeavesPage() {
 
       {/* Modal đăng ký OT */}
       {isOtModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">Đăng ký làm thêm giờ (OT)</h2>
               <button
@@ -1082,8 +1272,8 @@ export default function LeavesPage() {
 
       {/* Modal Từ chối đơn */}
       {rejectModalData && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-xl space-y-4">
             <h2 className="text-base font-bold text-gray-900">Xác nhận từ chối đơn</h2>
             <p className="text-sm text-gray-500">
               Vui lòng nhập lý do từ chối để nhân viên nắm được thông tin.

@@ -439,7 +439,7 @@ export default function AttendancePage() {
             )}
 
             {/* Map Container */}
-            <div className="flex-1 min-h-[360px] rounded-xl overflow-hidden">
+            <div className="flex-1 min-h-[260px] sm:min-h-[360px] rounded-xl overflow-hidden">
               {branch ? (
                 <AttendanceMap
                   branch={branch}
@@ -448,7 +448,7 @@ export default function AttendancePage() {
                   distance={distance}
                 />
               ) : (
-                <div className="w-full h-full min-h-[360px] bg-gray-50 flex items-center justify-center text-gray-400 text-sm">
+                <div className="w-full h-full min-h-[260px] sm:min-h-[360px] bg-gray-50 flex items-center justify-center text-gray-400 text-sm">
                   Đang tải vị trí chi nhánh...
                 </div>
               )}
@@ -682,70 +682,133 @@ export default function AttendancePage() {
             Chưa có lịch sử chấm công nào được ghi nhận.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/70 text-gray-600 text-xs uppercase tracking-wider">
-                  <th className="py-3 px-4 font-semibold">Ngày</th>
-                  <th className="py-3 px-4 font-semibold">Giờ vào</th>
-                  <th className="py-3 px-4 font-semibold">Giờ ra</th>
-                  <th className="py-3 px-4 font-semibold">Thời gian làm</th>
-                  <th className="py-3 px-4 font-semibold">Số công</th>
-                  <th className="py-3 px-4 font-semibold">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {history.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50/60 transition">
-                    <td className="py-3 px-4 font-medium text-gray-900">
+          <>
+            {/* Mobile Cards (sm:hidden) */}
+            <div className="sm:hidden space-y-3">
+              {history.map((record) => (
+                <div
+                  key={record.id}
+                  className="p-4 rounded-xl border border-gray-100 bg-gray-50/60 space-y-2.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-900 text-sm">
                       {formatVietnamDateDisplay(record.date)}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-gray-700">
-                      {record.checkInTime ? formatVietnamTime(record.checkInTime) : '--'}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-gray-700">
-                      {record.checkOutTime ? formatVietnamTime(record.checkOutTime) : '--'}
-                    </td>
-                    <td className="py-3 px-4 text-gray-700">
-                      {record.workDuration !== null && record.workDuration !== undefined
-                        ? formatDuration(record.workDuration)
-                        : '--'}
-                    </td>
-                    <td className="py-3 px-4 font-semibold text-gray-900">
+                    </span>
+                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
                       {record.workDays !== null && record.workDays !== undefined
                         ? `${record.workDays} công`
                         : '--'}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1.5 items-center">
-                        {record.isLate ? (
-                          <span className="text-[11px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
-                            Muộn {record.lateMinutes}p
-                          </span>
-                        ) : record.checkInTime ? (
-                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            Đúng giờ
-                          </span>
-                        ) : null}
+                    </span>
+                  </div>
 
-                        {record.isEarlyLeave && (
-                          <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                            Về sớm {record.earlyMinutes}p
-                          </span>
-                        )}
-
-                        {record.status === 'HALF_DAY' && (
-                          <span className="text-[11px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                            Nửa ngày
-                          </span>
-                        )}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-100">
+                      <div className="text-gray-400 font-medium">Giờ vào</div>
+                      <div className="font-mono font-bold text-gray-800 text-sm mt-0.5">
+                        {record.checkInTime ? formatVietnamTime(record.checkInTime) : '--'}
                       </div>
-                    </td>
+                      {record.isLate ? (
+                        <span className="inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded mt-1">
+                          Muộn {record.lateMinutes}p
+                        </span>
+                      ) : record.checkInTime ? (
+                        <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded mt-1">
+                          Đúng giờ
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-100">
+                      <div className="text-gray-400 font-medium">Giờ ra</div>
+                      <div className="font-mono font-bold text-gray-800 text-sm mt-0.5">
+                        {record.checkOutTime ? formatVietnamTime(record.checkOutTime) : '--'}
+                      </div>
+                      {record.isEarlyLeave && (
+                        <span className="inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded mt-1">
+                          Về sớm {record.earlyMinutes}p
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 text-gray-500">
+                    <span>Thời gian làm việc:</span>
+                    <span className="font-semibold text-gray-700">
+                      {record.workDuration !== null && record.workDuration !== undefined
+                        ? formatDuration(record.workDuration)
+                        : '--'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table (hidden sm:block) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50/70 text-gray-600 text-xs uppercase tracking-wider">
+                    <th className="py-3 px-4 font-semibold">Ngày</th>
+                    <th className="py-3 px-4 font-semibold">Giờ vào</th>
+                    <th className="py-3 px-4 font-semibold">Giờ ra</th>
+                    <th className="py-3 px-4 font-semibold">Thời gian làm</th>
+                    <th className="py-3 px-4 font-semibold">Số công</th>
+                    <th className="py-3 px-4 font-semibold">Trạng thái</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {history.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3 px-4 font-medium text-gray-900">
+                        {formatVietnamDateDisplay(record.date)}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-gray-700">
+                        {record.checkInTime ? formatVietnamTime(record.checkInTime) : '--'}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-gray-700">
+                        {record.checkOutTime ? formatVietnamTime(record.checkOutTime) : '--'}
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">
+                        {record.workDuration !== null && record.workDuration !== undefined
+                          ? formatDuration(record.workDuration)
+                          : '--'}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-gray-900">
+                        {record.workDays !== null && record.workDays !== undefined
+                          ? `${record.workDays} công`
+                          : '--'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-1.5 items-center">
+                          {record.isLate ? (
+                            <span className="text-[11px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
+                              Muộn {record.lateMinutes}p
+                            </span>
+                          ) : record.checkInTime ? (
+                            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                              Đúng giờ
+                            </span>
+                          ) : null}
+
+                          {record.isEarlyLeave && (
+                            <span className="text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                              Về sớm {record.earlyMinutes}p
+                            </span>
+                          )}
+
+                          {record.status === 'HALF_DAY' && (
+                            <span className="text-[11px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                              Nửa ngày
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

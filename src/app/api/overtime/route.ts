@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { parseDateOnly, isValidDateString } from '@/lib/attendance'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { createOvertimeRequestSchema } from '@/lib/validations'
+import { notifyOvertimeSubmitted } from '@/lib/notifications'
 import { LeaveStatus, Prisma, UserRole } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
@@ -183,9 +184,20 @@ export async function POST(req: NextRequest) {
             id: true,
             fullName: true,
             employeeCode: true,
+            branchId: true,
           },
         },
       },
+    })
+
+    // Thông báo cho Branch Admin & HR
+    await notifyOvertimeSubmitted({
+      employeeId,
+      employeeName: otRequest?.employee?.fullName || session.user.employee?.fullName || 'Nhân viên',
+      branchId: otRequest?.employee?.branchId || session.user.employee?.branchId || '',
+      otId: otRequest.id,
+      date: otRequest.date,
+      hours: otRequest.hours,
     })
 
     return successResponse(otRequest, 201)

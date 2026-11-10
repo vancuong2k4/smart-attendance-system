@@ -5,6 +5,7 @@ import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { approveLeaveSchema } from '@/lib/validations'
 import { canApproveRequests } from '@/lib/rbac'
 import { AttendanceStatus, LeaveStatus, UserRole } from '@prisma/client'
+import { notifyLeaveDecision } from '@/lib/notifications'
 
 export async function PATCH(
   req: NextRequest,
@@ -176,14 +177,15 @@ export async function PATCH(
         }
 
         // Tạo thông báo
-        await tx.notification.create({
-          data: {
+        await notifyLeaveDecision(
+          {
             employeeId: leaveRequest.employeeId,
-            type: 'LEAVE_APPROVED',
-            title: 'Đơn nghỉ phép đã được phê duyệt',
-            message: `Đơn xin nghỉ phép từ ${leaveRequest.startDate.toISOString().slice(0, 10)} đến ${leaveRequest.endDate.toISOString().slice(0, 10)} đã được phê duyệt.`,
+            action: 'APPROVED',
+            startDate: leaveRequest.startDate,
+            endDate: leaveRequest.endDate,
           },
-        })
+          tx
+        )
 
         return updated
       })
@@ -206,16 +208,16 @@ export async function PATCH(
           },
         })
 
-        await tx.notification.create({
-          data: {
+        await notifyLeaveDecision(
+          {
             employeeId: leaveRequest.employeeId,
-            type: 'LEAVE_REJECTED',
-            title: 'Đơn nghỉ phép bị từ chối',
-            message: `Đơn xin nghỉ phép từ ${leaveRequest.startDate.toISOString().slice(0, 10)} đến ${leaveRequest.endDate.toISOString().slice(0, 10)} đã bị từ chối.${
-              rejectReason ? ` Lý do: ${rejectReason}` : ''
-            }`,
+            action: 'REJECTED',
+            startDate: leaveRequest.startDate,
+            endDate: leaveRequest.endDate,
+            rejectReason,
           },
-        })
+          tx
+        )
 
         return updated
       })

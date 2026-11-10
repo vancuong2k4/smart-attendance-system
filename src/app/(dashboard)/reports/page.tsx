@@ -379,58 +379,104 @@ export default function ReportsPage() {
             <p className="text-sm">Không có dữ liệu nhân viên trong kỳ được chọn</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
-                <tr>
-                  <th className="px-5 py-3">Mã NV</th>
-                  <th className="px-5 py-3">Họ và tên</th>
-                  <th className="px-5 py-3">Phòng ban</th>
-                  <th className="px-5 py-3">Chi nhánh</th>
-                  <th className="px-4 py-3 text-right">Ngày công</th>
-                  <th className="px-4 py-3 text-right">Ngày vắng</th>
-                  <th className="px-4 py-3 text-right">Nghỉ có lương</th>
-                  <th className="px-4 py-3 text-right">Đi muộn</th>
-                  <th className="px-4 py-3 text-right">Giờ OT</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredRecords.map((item) => (
-                  <tr key={item.employee_code} className="hover:bg-gray-50/70">
-                    <td className="px-5 py-3.5 font-medium text-gray-900">
-                      {item.employee_code}
-                    </td>
-                    <td className="px-5 py-3.5 font-medium text-gray-900">
-                      {item.employee_name}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-600">{item.department}</td>
-                    <td className="px-5 py-3.5 text-gray-600">{item.branch}</td>
-                    <td className="px-4 py-3.5 text-right font-semibold text-emerald-600">
-                      {item.work_days}
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-medium text-red-600">
-                      {item.absent_days > 0 ? item.absent_days : '0'}
-                    </td>
-                    <td className="px-4 py-3.5 text-right text-gray-700">
-                      {item.paid_leave_days}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      {item.late_count > 0 ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                          {item.late_count} lần
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">0</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-right font-semibold text-purple-600">
-                      {item.ot_hours > 0 ? `${item.ot_hours}h` : '0h'}
-                    </td>
+          <>
+            {/* Mobile Cards (sm:hidden) */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {filteredRecords.map((item) => (
+                <div key={item.employee_code} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">{item.employee_name}</p>
+                      <p className="text-xs text-gray-400">
+                        {item.employee_code} • {item.department} ({item.branch})
+                      </p>
+                    </div>
+                    <span className="font-bold text-sm text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      {item.work_days} công
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs pt-1">
+                    <div className="bg-gray-50 p-2 rounded-lg text-center">
+                      <span className="text-gray-400 block text-[11px]">Nghỉ phép</span>
+                      <span className="font-semibold text-gray-800">{item.paid_leave_days} ngày</span>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg text-center">
+                      <span className="text-gray-400 block text-[11px]">Vắng mặt</span>
+                      <span className={`font-semibold ${item.absent_days > 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                        {item.absent_days} ngày
+                      </span>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded-lg text-center">
+                      <span className="text-gray-400 block text-[11px]">Làm thêm</span>
+                      <span className="font-semibold text-purple-600">{item.ot_hours}h</span>
+                    </div>
+                  </div>
+
+                  {item.late_count > 0 && (
+                    <div className="text-[11px] text-amber-700 bg-amber-50 px-2 py-1 rounded flex items-center justify-between">
+                      <span>Ghi nhận đi muộn:</span>
+                      <span className="font-bold">{item.late_count} lần</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table (hidden sm:block) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-left text-sm text-gray-600 min-w-[700px]">
+                <thead className="bg-gray-50 text-gray-700 font-semibold text-xs uppercase border-b border-gray-200">
+                  <tr>
+                    <th className="px-5 py-3">Mã NV</th>
+                    <th className="px-5 py-3">Họ và tên</th>
+                    <th className="px-5 py-3">Phòng ban</th>
+                    <th className="px-5 py-3">Chi nhánh</th>
+                    <th className="px-4 py-3 text-right">Ngày công</th>
+                    <th className="px-4 py-3 text-right">Ngày vắng</th>
+                    <th className="px-4 py-3 text-right">Nghỉ có lương</th>
+                    <th className="px-4 py-3 text-right">Đi muộn</th>
+                    <th className="px-4 py-3 text-right">Giờ OT</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredRecords.map((item) => (
+                    <tr key={item.employee_code} className="hover:bg-gray-50/70">
+                      <td className="px-5 py-3.5 font-medium text-gray-900">
+                        {item.employee_code}
+                      </td>
+                      <td className="px-5 py-3.5 font-medium text-gray-900">
+                        {item.employee_name}
+                      </td>
+                      <td className="px-5 py-3.5 text-gray-600">{item.department}</td>
+                      <td className="px-5 py-3.5 text-gray-600">{item.branch}</td>
+                      <td className="px-4 py-3.5 text-right font-semibold text-emerald-600">
+                        {item.work_days}
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-medium text-red-600">
+                        {item.absent_days > 0 ? item.absent_days : '0'}
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-gray-700">
+                        {item.paid_leave_days}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        {item.late_count > 0 ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                            {item.late_count} lần
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">0</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-semibold text-purple-600">
+                        {item.ot_hours > 0 ? `${item.ot_hours}h` : '0h'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
