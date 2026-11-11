@@ -2,9 +2,10 @@ import { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { parseDateOnly, isValidDateString, getVietnamDateString } from '@/lib/attendance'
-import { combineDateAndTimeString, validateAdjustmentTimes } from '@/lib/attendance-adjustment'
+import { combineDateAndTimeString, validateAdjustmentTimes, getAdjustmentTypeLabel } from '@/lib/attendance-adjustment'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { createAttendanceAdjustmentSchema } from '@/lib/validations'
+import { notifyAdjustmentSubmitted } from '@/lib/notifications'
 import { AdjustmentStatus, AdjustmentType, Prisma, UserRole } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
@@ -254,6 +255,20 @@ export async function POST(req: NextRequest) {
         },
       },
     })
+
+    // Gửi thông báo đến Branch Admin & HR Manager & Super Admin
+    try {
+      await notifyAdjustmentSubmitted({
+        employeeId,
+        employeeName: adjustment.employee.fullName,
+        branchId: adjustment.employee.branchId,
+        adjustmentId: adjustment.id,
+        date: adjustment.date,
+        typeLabel: getAdjustmentTypeLabel(adjustment.type),
+      })
+    } catch (notifErr) {
+      console.error('Failed to send adjustment submission notification:', notifErr)
+    }
 
     return successResponse(adjustment, 201)
   } catch (error: any) {

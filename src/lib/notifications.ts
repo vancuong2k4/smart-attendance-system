@@ -289,3 +289,68 @@ export async function notifyCheckInSuccess(
     client
   )
 }
+
+/**
+ * Thông báo khi nhân viên nộp đơn giải trình chấm công bù
+ */
+export async function notifyAdjustmentSubmitted(
+  params: {
+    employeeId: string
+    employeeName: string
+    branchId: string
+    adjustmentId: string
+    date: Date | string
+    typeLabel: string
+  },
+  client: any = prisma
+) {
+  const dateStr = formatVietnamDateDisplay(params.date)
+
+  return createNotificationsForRoles(
+    {
+      roles: [UserRole.BRANCH_ADMIN, UserRole.HR_MANAGER, UserRole.SUPER_ADMIN],
+      branchId: params.branchId,
+      excludeEmployeeId: params.employeeId,
+      type: 'ADJUSTMENT_SUBMITTED',
+      title: 'Đơn giải trình chấm công mới',
+      message: `Nhân viên ${params.employeeName} đã nộp đơn giải trình (${params.typeLabel}) cho ngày ${dateStr}.`,
+      link: '/attendance/manage',
+    },
+    client
+  )
+}
+
+/**
+ * Thông báo khi đơn giải trình chấm công được phê duyệt hoặc bị từ chối
+ */
+export async function notifyAdjustmentDecision(
+  params: {
+    employeeId: string
+    action: 'APPROVED' | 'REJECTED'
+    date: Date | string
+    typeLabel: string
+    rejectReason?: string | null
+  },
+  client: any = prisma
+) {
+  const dateStr = formatVietnamDateDisplay(params.date)
+  const isApproved = params.action === 'APPROVED'
+
+  return createNotification(
+    {
+      employeeId: params.employeeId,
+      type: isApproved ? 'ADJUSTMENT_APPROVED' : 'ADJUSTMENT_REJECTED',
+      title: isApproved
+        ? 'Đơn giải trình bù công đã được duyệt'
+        : 'Đơn giải trình bù công bị từ chối',
+      message: isApproved
+        ? `Đơn giải trình chấm công (${params.typeLabel}) ngày ${dateStr} đã được duyệt.`
+        : `Đơn giải trình chấm công (${params.typeLabel}) ngày ${dateStr} đã bị từ chối.${
+            params.rejectReason ? ` Lý do: ${params.rejectReason}` : ''
+          }`,
+      link: '/attendance',
+    },
+    client
+  )
+}
+

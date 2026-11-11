@@ -4,7 +4,12 @@ import { prisma } from '@/lib/db'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { approveAttendanceAdjustmentSchema } from '@/lib/validations'
 import { canApproveRequests } from '@/lib/rbac'
-import { applyAttendanceAdjustment, rejectAttendanceAdjustment } from '@/lib/attendance-adjustment'
+import {
+  applyAttendanceAdjustment,
+  rejectAttendanceAdjustment,
+  getAdjustmentTypeLabel,
+} from '@/lib/attendance-adjustment'
+import { notifyAdjustmentDecision } from '@/lib/notifications'
 import { AdjustmentStatus, UserRole } from '@prisma/client'
 
 export async function PATCH(
@@ -81,21 +86,49 @@ export async function PATCH(
     }
 
     const approverId = session.user.employee?.id || session.user.id
+    const ipAddress =
+      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      req.headers.get('x-real-ip') ||
+      undefined
+    const auditOptions = { userId: session.user.id, ipAddress }
+
+    let responsePayload: any = null
 
     if (action === 'APPROVED') {
-      const result = await applyAttendanceAdjustment(prisma, id, approverId)
-      return successResponse({
+      const result = await applyAttendanceAdjustment(prisma, id, approverId, auditOptions)
+      responsePayload = {
         message: 'Phê duyệt đơn giải trình bù công thành công',
         adjustment: result.adjustment,
         attendanceRecord: result.attendanceRecord,
-      })
+      }
     } else {
-      const updated = await rejectAttendanceAdjustment(prisma, id, approverId, rejectReason)
-      return successResponse({
+      const updated = await rejectAttendanceAdjustment(
+        prisma,
+        id,
+        approverId,
+        rejectReason,
+        auditOptions
+      )
+      responsePayload = {
         message: 'Từ chối đơn giải trình bù công thành công',
         adjustment: updated,
-      })
+      }
     }
+
+    // Gửi thông báo đến nhân viên đã nộp đơn
+    try {
+      await notifyAdjustmentDecision({
+        employeeId: adjustment.employeeId,
+        action,
+        date: adjustment.date,
+        typeLabel: getAdjustmentTypeLabel(adjustment.type),
+        rejectReason,
+      })
+    } catch (notifErr) {
+      console.error('Failed to send adjustment decision notification:', notifErr)
+    }
+
+    return successResponse(responsePayload)
   } catch (error: any) {
     console.error('Error approving attendance adjustment:', error)
     return errorResponse(

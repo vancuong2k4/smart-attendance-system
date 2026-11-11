@@ -133,13 +133,19 @@ export function calculateAdjustmentWorkMetrics(
   }
 }
 
+export interface AdjustmentAuditOptions {
+  userId?: string
+  ipAddress?: string
+}
+
 /**
- * Xử lý duyệt đơn giải trình và đồng bộ bản ghi AttendanceRecord
+ * Xử lý duyệt đơn giải trình và đồng bộ bản ghi AttendanceRecord kèm AuditLog
  */
 export async function applyAttendanceAdjustment(
   prismaClient: any,
   adjustmentId: string,
-  approvedById: string
+  approvedById: string,
+  options?: AdjustmentAuditOptions
 ) {
   const adjustment = await prismaClient.attendanceAdjustment.findUnique({
     where: { id: adjustmentId },
@@ -229,7 +235,7 @@ export async function applyAttendanceAdjustment(
     ? `${existingRecord.note} | ${noteSuffix}`
     : noteSuffix
 
-  const [updatedAdjustment, attendanceRecord] = await prismaClient.$transaction([
+  const txOps: any[] = [
     prismaClient.attendanceAdjustment.update({
       where: { id: adjustmentId },
       data: {
@@ -282,19 +288,60 @@ export async function applyAttendanceAdjustment(
         note: updatedNote,
       },
     }),
-  ])
+  ]
+
+  if (prismaClient.auditLog?.create) {
+    txOps.push(
+      prismaClient.auditLog.create({
+        data: {
+          userId: options?.userId || approvedById,
+          action: 'APPROVE_ATTENDANCE_ADJUSTMENT',
+          entity: 'AttendanceAdjustment',
+          entityId: adjustmentId,
+          oldData: {
+            status: adjustment.status,
+            previousAttendance: existingRecord
+              ? {
+                  checkInTime: existingRecord.checkInTime,
+                  checkOutTime: existingRecord.checkOutTime,
+                  workDuration: existingRecord.workDuration,
+                  workDays: existingRecord.workDays,
+                  status: existingRecord.status,
+                }
+              : null,
+          },
+          newData: {
+            status: 'APPROVED',
+            approvedById,
+            effectiveCheckInTime,
+            effectiveCheckOutTime,
+            workDuration,
+            workDays,
+            status: attendanceStatus,
+            isManualEntry: true,
+          },
+          ipAddress: options?.ipAddress || null,
+        },
+      })
+    )
+  }
+
+  const txResults = await prismaClient.$transaction(txOps)
+  const updatedAdjustment = txResults[0]
+  const attendanceRecord = txResults[1]
 
   return { adjustment: updatedAdjustment, attendanceRecord }
 }
 
 /**
- * Xử lý từ chối đơn giải trình
+ * Xử lý từ chối đơn giải trình kèm AuditLog
  */
 export async function rejectAttendanceAdjustment(
   prismaClient: any,
   adjustmentId: string,
   approvedById: string,
-  rejectReason?: string
+  rejectReason?: string,
+  options?: AdjustmentAuditOptions
 ) {
   const adjustment = await prismaClient.attendanceAdjustment.findUnique({
     where: { id: adjustmentId },
@@ -308,12 +355,44 @@ export async function rejectAttendanceAdjustment(
     throw new Error('Đơn giải trình đã được xử lý hoặc đã bị hủy')
   }
 
+  const now = new Date()
+
+  if (prismaClient.auditLog?.create) {
+    const [updated] = await prismaClient.$transaction([
+      prismaClient.attendanceAdjustment.update({
+        where: { id: adjustmentId },
+        data: {
+          status: 'REJECTED',
+          approvedById,
+          approvedAt: now,
+          rejectReason: rejectReason || null,
+        },
+      }),
+      prismaClient.auditLog.create({
+        data: {
+          userId: options?.userId || approvedById,
+          action: 'REJECT_ATTENDANCE_ADJUSTMENT',
+          entity: 'AttendanceAdjustment',
+          entityId: adjustmentId,
+          oldData: { status: adjustment.status },
+          newData: {
+            status: 'REJECTED',
+            approvedById,
+            rejectReason: rejectReason || null,
+          },
+          ipAddress: options?.ipAddress || null,
+        },
+      }),
+    ])
+    return updated
+  }
+
   return prismaClient.attendanceAdjustment.update({
     where: { id: adjustmentId },
     data: {
       status: 'REJECTED',
       approvedById,
-      approvedAt: new Date(),
+      approvedAt: now,
       rejectReason: rejectReason || null,
     },
   })
