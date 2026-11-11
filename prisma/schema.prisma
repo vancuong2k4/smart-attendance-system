@@ -125,6 +125,7 @@ model Employee {
   leaveRequests    LeaveRequest[]
   overtimeRequests OvertimeRequest[]
   notifications    Notification[]
+  adjustments      AttendanceAdjustment[]
 }
 
 enum Gender {
@@ -220,6 +221,48 @@ enum AttendanceStatus {
   HOLIDAY
   WEEKEND
   HALF_DAY
+}
+
+// ═══════════════════════════════════════
+// ATTENDANCE ADJUSTMENT / CORRECTION
+// ═══════════════════════════════════════
+
+model AttendanceAdjustment {
+  id                String            @id @default(cuid())
+  employeeId        String
+  date              DateTime          @db.Date
+  type              AdjustmentType
+  requestedCheckIn  DateTime?
+  requestedCheckOut DateTime?
+  reason            String
+  evidenceUrl       String?
+  status            AdjustmentStatus  @default(PENDING)
+  approvedById      String?
+  approvedAt        DateTime?
+  rejectReason      String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, date])
+  @@index([status])
+  @@index([date])
+}
+
+enum AdjustmentType {
+  FORGOT_CHECKIN
+  FORGOT_CHECKOUT
+  FORGOT_BOTH
+  GPS_ERROR
+  BUSINESS_OUTSIDE
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 
 // ═══════════════════════════════════════
