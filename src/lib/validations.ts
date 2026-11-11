@@ -50,6 +50,50 @@ export const manualAttendanceSchema = z.object({
   note: z.string().max(500).optional(),
 })
 
+export const createAttendanceAdjustmentSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải theo định dạng YYYY-MM-DD'),
+    type: z.enum([
+      'FORGOT_CHECKIN',
+      'FORGOT_CHECKOUT',
+      'FORGOT_BOTH',
+      'GPS_ERROR',
+      'BUSINESS_OUTSIDE',
+    ]),
+    requestedCheckIn: z.string().optional().nullable(),
+    requestedCheckOut: z.string().optional().nullable(),
+    reason: z.string().min(5, 'Lý do tối thiểu 5 ký tự').max(1000, 'Lý do tối đa 1000 ký tự'),
+    evidenceUrl: z.string().max(1000).optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      const hasIn = Boolean(data.requestedCheckIn && data.requestedCheckIn.trim())
+      const hasOut = Boolean(data.requestedCheckOut && data.requestedCheckOut.trim())
+      return hasIn || hasOut
+    },
+    {
+      message: 'Cần cung cấp ít nhất giờ check-in hoặc check-out đề xuất',
+      path: ['requestedCheckIn'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.requestedCheckIn && data.requestedCheckOut) {
+        return data.requestedCheckIn < data.requestedCheckOut
+      }
+      return true
+    },
+    {
+      message: 'Giờ check-out đề xuất phải sau giờ check-in đề xuất',
+      path: ['requestedCheckOut'],
+    }
+  )
+
+export const approveAttendanceAdjustmentSchema = z.object({
+  action: z.enum(['APPROVED', 'REJECTED']),
+  rejectReason: z.string().max(500, 'Lý do từ chối tối đa 500 ký tự').optional(),
+})
+
 // ==========================================
 // EMPLOYEE SCHEMAS
 // ==========================================
@@ -177,3 +221,5 @@ export type CreateOvertimeInput = z.infer<typeof createOvertimeRequestSchema>
 export type ApproveOvertimeInput = z.infer<typeof approveOvertimeSchema>
 export type CreateBranchInput = z.infer<typeof createBranchSchema>
 export type UpdateNotificationInput = z.infer<typeof updateNotificationSchema>
+export type CreateAttendanceAdjustmentInput = z.infer<typeof createAttendanceAdjustmentSchema>
+export type ApproveAttendanceAdjustmentInput = z.infer<typeof approveAttendanceAdjustmentSchema>
