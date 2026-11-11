@@ -858,7 +858,7 @@ export default function AttendancePage() {
           <AttendanceAdjustmentList
             refreshTrigger={adjustmentRefreshKey}
             onAdjustmentChanged={() => {
-              loadData()
+              loadInitialData()
               setAdjustmentRefreshKey((k) => k + 1)
             }}
           />
@@ -1103,7 +1103,9 @@ export default function AttendancePage() {
             </div>
           </>
         )}
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Lightbox / Photo Preview Modal */}
       {lightboxPhoto && (

@@ -149,6 +149,21 @@ Query params: `?branchId=&departmentId=&employeeId=&from=&to=&status=&page=&limi
 **🔐 Role:** BRANCH_ADMIN, HR_MANAGER
 Điều chỉnh chấm công thủ công (ghi nhận audit log).
 
+### POST `/api/attendance/adjustments`
+**🔐 Role:** ALL (Nhân viên nộp đơn giải trình quên chấm công / lỗi GPS / công tác ngoài)
+
+### GET `/api/attendance/adjustments`
+**🔐 Role:** ALL (Phân quyền theo RBAC: Employee xem cá nhân, Branch Admin xem chi nhánh, HR/Super Admin xem toàn bộ)
+
+### GET `/api/attendance/adjustments/:id`
+**🔐 Role:** ALL (Xem chi tiết đơn giải trình)
+
+### PATCH `/api/attendance/adjustments/:id/approve`
+**🔐 Role:** BRANCH_ADMIN, HR_MANAGER, SUPER_ADMIN (Phê duyệt hoặc từ chối giải trình kèm cập nhật AttendanceRecord & ghi nhận AuditLog)
+
+### DELETE `/api/attendance/adjustments/:id`
+**🔐 Role:** EMPLOYEE (chính chủ), SUPER_ADMIN (Hủy đơn đang chờ duyệt)
+
 ---
 
 ## 3. Employees (Nhân viên)
