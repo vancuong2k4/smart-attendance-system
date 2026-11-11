@@ -13,8 +13,13 @@ import {
   Building,
   Navigation,
   Info,
+  Camera,
+  Eye,
+  X,
+  Maximize2,
 } from 'lucide-react'
 import AttendanceMap from '@/components/attendance/AttendanceMap'
+import CameraSelfie from '@/components/attendance/CameraSelfie'
 import { calculateDistance, isWithinRadius } from '@/lib/gps'
 import { formatVietnamTime, formatVietnamDateDisplay, formatDuration } from '@/lib/attendance'
 
@@ -48,14 +53,25 @@ interface TodayData {
   earlyMinutes: number
   workDuration?: number | null
   workDays?: number | null
-  record?: any
+  record?: {
+    id: string
+    checkInPhoto?: string | null
+    checkOutPhoto?: string | null
+    checkInTime?: string | null
+    checkOutTime?: string | null
+    checkInAccuracy?: number | null
+    checkOutAccuracy?: number | null
+    [key: string]: any
+  } | null
 }
 
 interface HistoryItem {
   id: string
   date: string
   checkInTime?: string | null
+  checkInPhoto?: string | null
   checkOutTime?: string | null
+  checkOutPhoto?: string | null
   workDuration?: number | null
   workDays?: number | null
   isLate?: boolean | null
@@ -81,6 +97,15 @@ export default function AttendancePage() {
   } | null>(null)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [fetchingGps, setFetchingGps] = useState(false)
+
+  // Selfie state
+  const [selfiePhoto, setSelfiePhoto] = useState<string | null>(null)
+  const [lightboxPhoto, setLightboxPhoto] = useState<{
+    url: string
+    title: string
+    time?: string | null
+    accuracy?: number | null
+  } | null>(null)
 
   // Notification / Alert message
   const [alert, setAlert] = useState<{
@@ -227,6 +252,14 @@ export default function AttendancePage() {
       return
     }
 
+    if (!selfiePhoto) {
+      setAlert({
+        type: 'error',
+        message: 'Vui lòng chụp ảnh selfie khuôn mặt trước khi bấm Check-in.',
+      })
+      return
+    }
+
     try {
       setSubmitting(true)
       setAlert(null)
@@ -239,12 +272,14 @@ export default function AttendancePage() {
           longitude: userLocation.longitude,
           accuracy: userLocation.accuracy,
           deviceInfo: navigator.userAgent,
+          photo: selfiePhoto,
         }),
       })
 
       const json = await res.json()
       if (json.success) {
         setAlert({ type: 'success', message: json.data.message || 'Check-in thành công!' })
+        setSelfiePhoto(null)
         await loadInitialData()
       } else {
         setAlert({
@@ -275,6 +310,14 @@ export default function AttendancePage() {
       return
     }
 
+    if (!selfiePhoto) {
+      setAlert({
+        type: 'error',
+        message: 'Vui lòng chụp ảnh selfie khuôn mặt trước khi bấm Check-out.',
+      })
+      return
+    }
+
     try {
       setSubmitting(true)
       setAlert(null)
@@ -287,12 +330,14 @@ export default function AttendancePage() {
           longitude: userLocation.longitude,
           accuracy: userLocation.accuracy,
           deviceInfo: navigator.userAgent,
+          photo: selfiePhoto,
         }),
       })
 
       const json = await res.json()
       if (json.success) {
         setAlert({ type: 'success', message: json.data.message || 'Check-out thành công!' })
+        setSelfiePhoto(null)
         await loadInitialData()
       } else {
         setAlert({
@@ -595,6 +640,90 @@ export default function AttendancePage() {
               </span>
             </div>
 
+            {/* Today Recorded Photos Preview */}
+            {(todayStatus?.record?.checkInPhoto || todayStatus?.record?.checkOutPhoto) && (
+              <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100 space-y-2">
+                <div className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                  Ảnh selfie đã ghi nhận hôm nay
+                </div>
+                <div className="flex items-center gap-3">
+                  {todayStatus?.record?.checkInPhoto && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLightboxPhoto({
+                          url: todayStatus.record!.checkInPhoto!,
+                          title: 'Ảnh selfie Check-in hôm nay',
+                          time: todayStatus.checkInTime,
+                          accuracy: todayStatus.record?.checkInAccuracy,
+                        })
+                      }
+                      className="group relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-emerald-500 transition cursor-pointer"
+                      title="Bấm để xem ảnh check-in"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={todayStatus.record.checkInPhoto}
+                        alt="Check-in selfie"
+                        className="w-full h-full object-cover group-hover:scale-105 transition"
+                      />
+                      <span className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-white text-[9px] font-bold text-center py-0.5">
+                        Vào
+                      </span>
+                    </button>
+                  )}
+
+                  {todayStatus?.record?.checkOutPhoto && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLightboxPhoto({
+                          url: todayStatus.record!.checkOutPhoto!,
+                          title: 'Ảnh selfie Check-out hôm nay',
+                          time: todayStatus.checkOutTime,
+                          accuracy: todayStatus.record?.checkOutAccuracy,
+                        })
+                      }
+                      className="group relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:ring-2 hover:ring-indigo-500 transition cursor-pointer"
+                      title="Bấm để xem ảnh check-out"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={todayStatus.record.checkOutPhoto}
+                        alt="Check-out selfie"
+                        className="w-full h-full object-cover group-hover:scale-105 transition"
+                      />
+                      <span className="absolute bottom-0 inset-x-0 bg-indigo-600/90 text-white text-[9px] font-bold text-center py-0.5">
+                        Ra
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Camera Selfie Widget */}
+            {todayStatus?.status === 'NOT_CHECKED_IN' && (
+              <CameraSelfie
+                onPhotoCaptured={setSelfiePhoto}
+                capturedPhoto={selfiePhoto}
+                disabled={submitting}
+                label="Chụp ảnh selfie khuôn mặt Check-in"
+                required
+              />
+            )}
+
+            {todayStatus?.status === 'CHECKED_IN' && (
+              <CameraSelfie
+                onPhotoCaptured={setSelfiePhoto}
+                capturedPhoto={selfiePhoto}
+                disabled={submitting}
+                label="Chụp ảnh selfie khuôn mặt Check-out"
+                required
+              />
+            )}
+
             {/* Action Buttons */}
             <div>
               {todayStatus?.status === 'NOT_CHECKED_IN' && (
@@ -612,7 +741,7 @@ export default function AttendancePage() {
                   ) : (
                     <>
                       <LogIn className="w-5 h-5" />
-                      Check-in GPS ngay
+                      Check-in GPS + Selfie
                     </>
                   )}
                 </button>
@@ -633,7 +762,7 @@ export default function AttendancePage() {
                   ) : (
                     <>
                       <LogOut className="w-5 h-5" />
-                      Check-out GPS
+                      Check-out GPS + Selfie
                     </>
                   )}
                 </button>
@@ -739,6 +868,44 @@ export default function AttendancePage() {
                         : '--'}
                     </span>
                   </div>
+                  {/* Selfie thumbnails in mobile card */}
+                  {(record.checkInPhoto || record.checkOutPhoto) && (
+                    <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+                      <span className="text-[11px] text-gray-500">Ảnh selfie:</span>
+                      {record.checkInPhoto && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setLightboxPhoto({
+                              url: record.checkInPhoto!,
+                              title: `Selfie Check-in (${formatVietnamDateDisplay(record.date)})`,
+                              time: record.checkInTime,
+                            })
+                          }
+                          className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 hover:bg-emerald-100 transition flex items-center gap-1"
+                        >
+                          <Camera className="w-3 h-3" />
+                          Vào
+                        </button>
+                      )}
+                      {record.checkOutPhoto && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setLightboxPhoto({
+                              url: record.checkOutPhoto!,
+                              title: `Selfie Check-out (${formatVietnamDateDisplay(record.date)})`,
+                              time: record.checkOutTime,
+                            })
+                          }
+                          className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200 hover:bg-indigo-100 transition flex items-center gap-1"
+                        >
+                          <Camera className="w-3 h-3" />
+                          Ra
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -749,6 +916,7 @@ export default function AttendancePage() {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50/70 text-gray-600 text-xs uppercase tracking-wider">
                     <th className="py-3 px-4 font-semibold">Ngày</th>
+                    <th className="py-3 px-4 font-semibold">Ảnh Selfie</th>
                     <th className="py-3 px-4 font-semibold">Giờ vào</th>
                     <th className="py-3 px-4 font-semibold">Giờ ra</th>
                     <th className="py-3 px-4 font-semibold">Thời gian làm</th>
@@ -761,6 +929,63 @@ export default function AttendancePage() {
                     <tr key={record.id} className="hover:bg-gray-50/60 transition">
                       <td className="py-3 px-4 font-medium text-gray-900">
                         {formatVietnamDateDisplay(record.date)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1.5">
+                          {record.checkInPhoto ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setLightboxPhoto({
+                                  url: record.checkInPhoto!,
+                                  title: `Selfie Check-in (${formatVietnamDateDisplay(record.date)})`,
+                                  time: record.checkInTime,
+                                })
+                              }
+                              className="group relative w-8 h-8 rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-emerald-500 transition cursor-pointer"
+                              title="Xem ảnh check-in"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={record.checkInPhoto}
+                                alt="Check-in"
+                                className="w-full h-full object-cover group-hover:scale-110 transition"
+                              />
+                              <span className="absolute bottom-0 inset-x-0 bg-emerald-600 text-[8px] text-white text-center font-bold">
+                                In
+                              </span>
+                            </button>
+                          ) : null}
+
+                          {record.checkOutPhoto ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setLightboxPhoto({
+                                  url: record.checkOutPhoto!,
+                                  title: `Selfie Check-out (${formatVietnamDateDisplay(record.date)})`,
+                                  time: record.checkOutTime,
+                                })
+                              }
+                              className="group relative w-8 h-8 rounded-lg overflow-hidden border border-gray-200 hover:ring-2 hover:ring-indigo-500 transition cursor-pointer"
+                              title="Xem ảnh check-out"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={record.checkOutPhoto}
+                                alt="Check-out"
+                                className="w-full h-full object-cover group-hover:scale-110 transition"
+                              />
+                              <span className="absolute bottom-0 inset-x-0 bg-indigo-600 text-[8px] text-white text-center font-bold">
+                                Out
+                              </span>
+                            </button>
+                          ) : null}
+
+                          {!record.checkInPhoto && !record.checkOutPhoto && (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 font-mono text-gray-700">
                         {record.checkInTime ? formatVietnamTime(record.checkInTime) : '--'}
@@ -811,6 +1036,58 @@ export default function AttendancePage() {
           </>
         )}
       </div>
+
+      {/* Lightbox / Photo Preview Modal */}
+      {lightboxPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <div
+            className="relative max-w-md w-full bg-white rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">{lightboxPhoto.title}</h3>
+                {lightboxPhoto.time && (
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">
+                    Thời gian: {formatVietnamTime(lightboxPhoto.time)}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLightboxPhoto(null)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative aspect-[4/3] bg-black flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightboxPhoto.url}
+                alt={lightboxPhoto.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="p-4 bg-gray-50 flex items-center justify-between text-xs text-gray-600">
+              <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                Ảnh selfie xác thực khuôn mặt
+              </span>
+              {lightboxPhoto.accuracy && (
+                <span className="text-gray-500 font-mono">
+                  GPS: ±{Math.round(lightboxPhoto.accuracy)}m
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

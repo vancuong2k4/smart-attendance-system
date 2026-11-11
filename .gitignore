@@ -53,3 +53,7 @@ prisma/migrations/
 # Docker volumes
 postgres_data/
 redis_data/
+
+# Uploads
+/public/uploads/*
+!/public/uploads/attendance/.gitkeep

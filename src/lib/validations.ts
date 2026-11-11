@@ -29,9 +29,18 @@ export const checkInSchema = z.object({
   longitude: z.number().min(-180).max(180),
   accuracy: z.number().positive().optional(),
   deviceInfo: z.string().max(500).optional(),
+  photo: z.string().optional(),
+  checkInPhoto: z.string().optional(),
 })
 
-export const checkOutSchema = checkInSchema
+export const checkOutSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().positive().optional(),
+  deviceInfo: z.string().max(500).optional(),
+  photo: z.string().optional(),
+  checkOutPhoto: z.string().optional(),
+})
 
 export const manualAttendanceSchema = z.object({
   employeeId: z.string().cuid(),

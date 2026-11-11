@@ -11,6 +11,7 @@ import {
 } from '@/lib/attendance'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { notifyCheckInSuccess } from '@/lib/notifications'
+import { saveAttendancePhoto } from '@/lib/storage'
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { latitude, longitude, accuracy, deviceInfo } = parsed.data
+    const { latitude, longitude, accuracy, deviceInfo, photo, checkInPhoto } = parsed.data
 
     const employee = await prisma.employee.findUnique({
       where: { id: session.user.employee.id },
@@ -113,6 +114,22 @@ export async function POST(req: NextRequest) {
 
     const { lateMinutes, isLate } = calculateAttendanceCheckIn(now, schedule)
 
+    let savedPhotoUrl = checkInPhoto || photo || null
+    if (savedPhotoUrl && typeof savedPhotoUrl === 'string' && savedPhotoUrl.trim()) {
+      try {
+        savedPhotoUrl = await saveAttendancePhoto(savedPhotoUrl.trim(), employee.id)
+      } catch (err: any) {
+        console.error('Failed to save check-in selfie:', err)
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          err.message || 'Lỗi khi xử lý ảnh selfie check-in',
+          422
+        )
+      }
+    } else {
+      savedPhotoUrl = null
+    }
+
     const record = await prisma.attendanceRecord.upsert({
       where: {
         employeeId_date: {
@@ -128,6 +145,7 @@ export async function POST(req: NextRequest) {
         checkInLon: longitude,
         checkInAccuracy: accuracy,
         checkInDevice: deviceInfo,
+        checkInPhoto: savedPhotoUrl,
         checkInMethod: 'GPS',
         isLate,
         lateMinutes,
@@ -139,6 +157,7 @@ export async function POST(req: NextRequest) {
         checkInLon: longitude,
         checkInAccuracy: accuracy,
         checkInDevice: deviceInfo,
+        checkInPhoto: savedPhotoUrl,
         checkInMethod: 'GPS',
         isLate,
         lateMinutes,
@@ -159,6 +178,7 @@ export async function POST(req: NextRequest) {
     return successResponse({
       id: record.id,
       checkInTime: record.checkInTime,
+      checkInPhoto: record.checkInPhoto,
       isLate: record.isLate,
       lateMinutes: record.lateMinutes,
       distanceFromBranch: gpsResult.distance,

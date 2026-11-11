@@ -10,6 +10,7 @@ import {
   formatDuration,
 } from '@/lib/attendance'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
+import { saveAttendancePhoto } from '@/lib/storage'
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { latitude, longitude, accuracy, deviceInfo } = parsed.data
+    const { latitude, longitude, accuracy, deviceInfo, photo, checkOutPhoto } = parsed.data
 
     const employee = await prisma.employee.findUnique({
       where: { id: session.user.employee.id },
@@ -141,6 +142,22 @@ export async function POST(req: NextRequest) {
       attendanceStatus = 'ABSENT'
     }
 
+    let savedPhotoUrl = checkOutPhoto || photo || null
+    if (savedPhotoUrl && typeof savedPhotoUrl === 'string' && savedPhotoUrl.trim()) {
+      try {
+        savedPhotoUrl = await saveAttendancePhoto(savedPhotoUrl.trim(), employee.id)
+      } catch (err: any) {
+        console.error('Failed to save check-out selfie:', err)
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          err.message || 'Lỗi khi xử lý ảnh selfie check-out',
+          422
+        )
+      }
+    } else {
+      savedPhotoUrl = null
+    }
+
     const updatedRecord = await prisma.attendanceRecord.update({
       where: { id: record.id },
       data: {
@@ -149,6 +166,7 @@ export async function POST(req: NextRequest) {
         checkOutLon: longitude,
         checkOutAccuracy: accuracy,
         checkOutDevice: deviceInfo,
+        checkOutPhoto: savedPhotoUrl,
         checkOutMethod: 'GPS',
         workDuration,
         workDays,
@@ -161,6 +179,7 @@ export async function POST(req: NextRequest) {
     return successResponse({
       id: updatedRecord.id,
       checkOutTime: updatedRecord.checkOutTime,
+      checkOutPhoto: updatedRecord.checkOutPhoto,
       workDuration: updatedRecord.workDuration,
       workDays: updatedRecord.workDays,
       isEarlyLeave: updatedRecord.isEarlyLeave,

@@ -185,6 +185,7 @@ model AttendanceRecord {
   checkOutAccuracy Float?
   checkOutMethod   AttendanceMethod @default(GPS)
   checkOutDevice   String?
+  checkOutPhoto    String?
   workDuration     Float?
   workDays         Float?
   isLate           Boolean?

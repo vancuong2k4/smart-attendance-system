@@ -15,8 +15,13 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCheck,
+  Camera,
+  X,
+  ShieldCheck,
+  MapPin,
 } from 'lucide-react'
 import { formatVietnamTime, formatVietnamDateDisplay, formatDuration, getVietnamDateString } from '@/lib/attendance'
+import { calculateDistance } from '@/lib/gps'
 
 interface AttendanceRecordItem {
   id: string
@@ -26,11 +31,13 @@ interface AttendanceRecordItem {
   checkInLon?: number | null
   checkInAccuracy?: number | null
   checkInDevice?: string | null
+  checkInPhoto?: string | null
   checkOutTime?: string | null
   checkOutLat?: number | null
   checkOutLon?: number | null
   checkOutAccuracy?: number | null
   checkOutDevice?: string | null
+  checkOutPhoto?: string | null
   workDuration?: number | null
   workDays?: number | null
   isLate?: boolean | null
@@ -52,6 +59,9 @@ interface AttendanceRecordItem {
       id: string
       name: string
       code?: string | null
+      latitude?: number | null
+      longitude?: number | null
+      gpsRadius?: number | null
     } | null
   }
 }
@@ -74,6 +84,29 @@ export default function AttendanceManagePage() {
   const [branches, setBranches] = useState<BranchOption[]>([])
   const [departments, setDepartments] = useState<DepartmentOption[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Selfie Modal State
+  const [selfieModal, setSelfieModal] = useState<{
+    photoUrl: string
+    type: 'CHECK_IN' | 'CHECK_OUT'
+    employeeName: string
+    employeeCode: string
+    branchName?: string | null
+    departmentName?: string | null
+    time?: string | null
+    accuracy?: number | null
+    device?: string | null
+    date: string
+    distance?: number | null
+    allowedRadius?: number | null
+    otherPhotoUrl?: string | null
+    otherType?: 'CHECK_IN' | 'CHECK_OUT'
+    otherTime?: string | null
+    otherAccuracy?: number | null
+    otherDevice?: string | null
+    otherDistance?: number | null
+    otherAllowedRadius?: number | null
+  } | null>(null)
 
   // Filters
   const [selectedDate, setSelectedDate] = useState<string>(getVietnamDateString())
@@ -433,6 +466,7 @@ export default function AttendanceManagePage() {
                   <th className="py-3.5 px-4 font-semibold">Nhân viên</th>
                   <th className="py-3.5 px-4 font-semibold">Chi nhánh / Ban</th>
                   <th className="py-3.5 px-4 font-semibold">Ngày</th>
+                  <th className="py-3.5 px-4 font-semibold text-center">Ảnh Selfie</th>
                   <th className="py-3.5 px-4 font-semibold">Giờ vào (Check-in)</th>
                   <th className="py-3.5 px-4 font-semibold">Giờ ra (Check-out)</th>
                   <th className="py-3.5 px-4 font-semibold">Thời gian làm</th>
@@ -464,6 +498,143 @@ export default function AttendanceManagePage() {
                     {/* Date */}
                     <td className="py-3 px-4 text-xs font-medium text-gray-700">
                       {formatVietnamDateDisplay(r.date)}
+                    </td>
+
+                    {/* Selfie Thumbnails */}
+                    <td className="py-3 px-4">
+                      {(() => {
+                        const inDistance =
+                          r.checkInLat != null &&
+                          r.checkInLon != null &&
+                          r.employee.branch?.latitude != null &&
+                          r.employee.branch?.longitude != null
+                            ? Math.round(
+                                calculateDistance(
+                                  r.checkInLat,
+                                  r.checkInLon,
+                                  r.employee.branch.latitude,
+                                  r.employee.branch.longitude
+                                )
+                              )
+                            : null
+
+                        const outDistance =
+                          r.checkOutLat != null &&
+                          r.checkOutLon != null &&
+                          r.employee.branch?.latitude != null &&
+                          r.employee.branch?.longitude != null
+                            ? Math.round(
+                                calculateDistance(
+                                  r.checkOutLat,
+                                  r.checkOutLon,
+                                  r.employee.branch.latitude,
+                                  r.employee.branch.longitude
+                                )
+                              )
+                            : null
+
+                        const branchRadius = r.employee.branch?.gpsRadius || 100
+
+                        return (
+                          <div className="flex items-center justify-center gap-1.5">
+                            {r.checkInPhoto ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelfieModal({
+                                    photoUrl: r.checkInPhoto!,
+                                    type: 'CHECK_IN',
+                                    employeeName: r.employee.fullName,
+                                    employeeCode: r.employee.employeeCode,
+                                    branchName: r.employee.branch?.name,
+                                    departmentName: r.employee.department?.name,
+                                    time: r.checkInTime,
+                                    accuracy: r.checkInAccuracy,
+                                    device: r.checkInDevice,
+                                    date: r.date,
+                                    distance: inDistance,
+                                    allowedRadius: branchRadius,
+                                    otherPhotoUrl: r.checkOutPhoto,
+                                    otherType: 'CHECK_OUT',
+                                    otherTime: r.checkOutTime,
+                                    otherAccuracy: r.checkOutAccuracy,
+                                    otherDevice: r.checkOutDevice,
+                                    otherDistance: outDistance,
+                                    otherAllowedRadius: branchRadius,
+                                  })
+                                }
+                                className="group relative w-9 h-9 rounded-xl overflow-hidden border border-emerald-300 ring-2 ring-emerald-100 hover:ring-emerald-400 transition cursor-pointer shadow-xs"
+                                title="Bấm xem ảnh selfie check-in"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={r.checkInPhoto}
+                                  alt={`Check-in selfie ${r.employee.fullName}`}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition"
+                                />
+                                <span className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-white text-[8px] font-bold text-center py-0.5">
+                                  Vào
+                                </span>
+                              </button>
+                            ) : (
+                              <div
+                                className="w-8 h-8 rounded-lg border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400"
+                                title="Không có ảnh vào"
+                              >
+                                -
+                              </div>
+                            )}
+
+                            {r.checkOutPhoto ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelfieModal({
+                                    photoUrl: r.checkOutPhoto!,
+                                    type: 'CHECK_OUT',
+                                    employeeName: r.employee.fullName,
+                                    employeeCode: r.employee.employeeCode,
+                                    branchName: r.employee.branch?.name,
+                                    departmentName: r.employee.department?.name,
+                                    time: r.checkOutTime,
+                                    accuracy: r.checkOutAccuracy,
+                                    device: r.checkOutDevice,
+                                    date: r.date,
+                                    distance: outDistance,
+                                    allowedRadius: branchRadius,
+                                    otherPhotoUrl: r.checkInPhoto,
+                                    otherType: 'CHECK_IN',
+                                    otherTime: r.checkInTime,
+                                    otherAccuracy: r.checkInAccuracy,
+                                    otherDevice: r.checkInDevice,
+                                    otherDistance: inDistance,
+                                    otherAllowedRadius: branchRadius,
+                                  })
+                                }
+                                className="group relative w-9 h-9 rounded-xl overflow-hidden border border-indigo-300 ring-2 ring-indigo-100 hover:ring-indigo-400 transition cursor-pointer shadow-xs"
+                                title="Bấm xem ảnh selfie check-out"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={r.checkOutPhoto}
+                                  alt={`Check-out selfie ${r.employee.fullName}`}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition"
+                                />
+                                <span className="absolute bottom-0 inset-x-0 bg-indigo-600/90 text-white text-[8px] font-bold text-center py-0.5">
+                                  Ra
+                                </span>
+                              </button>
+                            ) : (
+                              <div
+                                className="w-8 h-8 rounded-lg border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400"
+                                title="Không có ảnh ra"
+                              >
+                                -
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
 
                     {/* Check-in */}
@@ -570,6 +741,227 @@ export default function AttendanceManagePage() {
           </div>
         )}
       </div>
+      {/* Selfie Lightbox Modal for Admin / HR */}
+      {selfieModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setSelfieModal(null)}
+        >
+          <div
+            className="relative max-w-lg w-full bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 border-b border-gray-100 flex items-start justify-between bg-gradient-to-r from-gray-50 to-white">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-gray-900">
+                    {selfieModal.employeeName}
+                  </h3>
+                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
+                    {selfieModal.employeeCode}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {selfieModal.branchName || 'Chi nhánh'} • {selfieModal.departmentName || 'Phòng ban'} — Ngày {formatVietnamDateDisplay(selfieModal.date)}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelfieModal(null)}
+                className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Toggle switch if both check-in and check-out photos exist */}
+            {selfieModal.otherPhotoUrl && (
+              <div className="px-5 pt-3 pb-1 bg-white flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-500">Xem ảnh:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selfieModal.type !== 'CHECK_IN') {
+                      // Swap to check-in
+                      setSelfieModal({
+                        photoUrl: selfieModal.otherPhotoUrl!,
+                        type: 'CHECK_IN',
+                        employeeName: selfieModal.employeeName,
+                        employeeCode: selfieModal.employeeCode,
+                        branchName: selfieModal.branchName,
+                        departmentName: selfieModal.departmentName,
+                        time: selfieModal.otherTime,
+                        accuracy: selfieModal.otherAccuracy,
+                        device: selfieModal.otherDevice,
+                        date: selfieModal.date,
+                        distance: selfieModal.otherDistance,
+                        allowedRadius: selfieModal.otherAllowedRadius,
+                        otherPhotoUrl: selfieModal.photoUrl,
+                        otherType: 'CHECK_OUT',
+                        otherTime: selfieModal.time,
+                        otherAccuracy: selfieModal.accuracy,
+                        otherDevice: selfieModal.device,
+                        otherDistance: selfieModal.distance,
+                        otherAllowedRadius: selfieModal.allowedRadius,
+                      })
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                    selfieModal.type === 'CHECK_IN'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  Selfie Check-in (Vào)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selfieModal.type !== 'CHECK_OUT') {
+                      // Swap to check-out
+                      setSelfieModal({
+                        photoUrl: selfieModal.otherPhotoUrl!,
+                        type: 'CHECK_OUT',
+                        employeeName: selfieModal.employeeName,
+                        employeeCode: selfieModal.employeeCode,
+                        branchName: selfieModal.branchName,
+                        departmentName: selfieModal.departmentName,
+                        time: selfieModal.otherTime,
+                        accuracy: selfieModal.otherAccuracy,
+                        device: selfieModal.otherDevice,
+                        date: selfieModal.date,
+                        distance: selfieModal.otherDistance,
+                        allowedRadius: selfieModal.otherAllowedRadius,
+                        otherPhotoUrl: selfieModal.photoUrl,
+                        otherType: 'CHECK_IN',
+                        otherTime: selfieModal.time,
+                        otherAccuracy: selfieModal.accuracy,
+                        otherDevice: selfieModal.device,
+                        otherDistance: selfieModal.distance,
+                        otherAllowedRadius: selfieModal.allowedRadius,
+                      })
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                    selfieModal.type === 'CHECK_OUT'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  Selfie Check-out (Ra)
+                </button>
+              </div>
+            )}
+
+            {/* Photo Container */}
+            <div className="relative aspect-[4/3] bg-black flex items-center justify-center overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={selfieModal.photoUrl}
+                alt={`Ảnh selfie ${selfieModal.type === 'CHECK_IN' ? 'Check-in' : 'Check-out'} của ${selfieModal.employeeName}`}
+                className="w-full h-full object-contain"
+              />
+
+              {/* Status Badge Overlay */}
+              <div
+                className={`absolute top-3 left-3 px-3 py-1 rounded-xl text-xs font-bold text-white shadow backdrop-blur-sm flex items-center gap-1.5 ${
+                  selfieModal.type === 'CHECK_IN'
+                    ? 'bg-emerald-600/90'
+                    : 'bg-indigo-600/90'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {selfieModal.type === 'CHECK_IN'
+                  ? 'Ảnh Selfie Check-in (Vào)'
+                  : 'Ảnh Selfie Check-out (Ra)'}
+              </div>
+            </div>
+
+            {/* Verification Metadata Panel */}
+            <div className="p-5 bg-gray-50 space-y-3 overflow-y-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div className="bg-white p-3 rounded-xl border border-gray-100">
+                  <div className="text-gray-400 font-medium flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                    Thời gian chấm công
+                  </div>
+                  <div className="font-mono font-bold text-gray-900 mt-1 text-sm">
+                    {selfieModal.time ? formatVietnamTime(selfieModal.time) : '--:--'}
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-gray-100">
+                  <div className="text-gray-400 font-medium flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                    Khoảng cách GPS
+                  </div>
+                  <div className="font-mono font-bold text-gray-900 mt-1 text-sm">
+                    {selfieModal.distance !== null && selfieModal.distance !== undefined
+                      ? `${selfieModal.distance}m`
+                      : 'Đúng quy định'}
+                  </div>
+                  {selfieModal.distance !== null && selfieModal.distance !== undefined && (
+                    <div className="mt-1">
+                      {selfieModal.distance <= (selfieModal.allowedRadius || 100) ? (
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                          Trong bán kính ({selfieModal.allowedRadius || 100}m)
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">
+                          Ngoài bán kính (+{selfieModal.distance - (selfieModal.allowedRadius || 100)}m)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-white p-3 rounded-xl border border-gray-100 col-span-2 sm:col-span-1">
+                  <div className="text-gray-400 font-medium flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
+                    Độ chính xác GPS
+                  </div>
+                  <div className="font-mono font-bold text-gray-900 mt-1 text-sm">
+                    {selfieModal.accuracy ? `±${Math.round(selfieModal.accuracy)}m` : 'Hợp lệ'}
+                  </div>
+                </div>
+              </div>
+
+              {selfieModal.branchName && (
+                <div className="text-[11px] text-gray-600 bg-white p-2.5 rounded-xl border border-gray-100 flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-gray-700">Chi nhánh / Ban:</span> {selfieModal.branchName}
+                    {selfieModal.departmentName && ` — ${selfieModal.departmentName}`}
+                  </div>
+                  {selfieModal.allowedRadius && (
+                    <span className="text-gray-400 font-mono text-[10px]">
+                      Bán kính: {selfieModal.allowedRadius}m
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {selfieModal.device && (
+                <div className="text-[11px] text-gray-500 bg-white p-2.5 rounded-xl border border-gray-100 truncate">
+                  <span className="font-semibold text-gray-700">Thiết bị:</span> {selfieModal.device}
+                </div>
+              )}
+
+              {/* Anti-fraud Verification Badge */}
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span className="leading-relaxed">
+                  <strong>Đối soát chống gian lận:</strong> Ảnh chụp selfie trực tiếp khuôn mặt bằng camera trước tại thời điểm chấm công kết hợp tọa độ khoảng cách GPS chi nhánh giúp HR phát hiện gian lận và chấm công hộ.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
