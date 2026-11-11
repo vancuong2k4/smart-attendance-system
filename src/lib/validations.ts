@@ -50,6 +50,28 @@ export const manualAttendanceSchema = z.object({
   note: z.string().max(500).optional(),
 })
 
+const isValidTimeStringOrIso = (val: string | null | undefined): boolean => {
+  if (!val || !val.trim()) return true
+  const trimmed = val.trim()
+  const isTimeFormat = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(trimmed)
+  if (isTimeFormat) return true
+  return !isNaN(Date.parse(trimmed))
+}
+
+const parseTimeStringToMinutes = (val: string | null | undefined): number | null => {
+  if (!val || !val.trim()) return null
+  const trimmed = val.trim()
+  if (/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(trimmed)) {
+    const [h, m] = trimmed.split(':').map(Number)
+    return h * 60 + m
+  }
+  const date = new Date(trimmed)
+  if (!isNaN(date.getTime())) {
+    return date.getTime()
+  }
+  return null
+}
+
 export const createAttendanceAdjustmentSchema = z
   .object({
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải theo định dạng YYYY-MM-DD'),
@@ -60,8 +82,20 @@ export const createAttendanceAdjustmentSchema = z
       'GPS_ERROR',
       'BUSINESS_OUTSIDE',
     ]),
-    requestedCheckIn: z.string().optional().nullable(),
-    requestedCheckOut: z.string().optional().nullable(),
+    requestedCheckIn: z
+      .string()
+      .optional()
+      .nullable()
+      .refine(isValidTimeStringOrIso, {
+        message: 'Giờ check-in không đúng định dạng (HH:mm hoặc ISO datetime)',
+      }),
+    requestedCheckOut: z
+      .string()
+      .optional()
+      .nullable()
+      .refine(isValidTimeStringOrIso, {
+        message: 'Giờ check-out không đúng định dạng (HH:mm hoặc ISO datetime)',
+      }),
     reason: z.string().min(5, 'Lý do tối thiểu 5 ký tự').max(1000, 'Lý do tối đa 1000 ký tự'),
     evidenceUrl: z.string().max(1000).optional().nullable(),
   })
@@ -79,6 +113,11 @@ export const createAttendanceAdjustmentSchema = z
   .refine(
     (data) => {
       if (data.requestedCheckIn && data.requestedCheckOut) {
+        const inMins = parseTimeStringToMinutes(data.requestedCheckIn)
+        const outMins = parseTimeStringToMinutes(data.requestedCheckOut)
+        if (inMins !== null && outMins !== null) {
+          return outMins > inMins
+        }
         return data.requestedCheckIn < data.requestedCheckOut
       }
       return true

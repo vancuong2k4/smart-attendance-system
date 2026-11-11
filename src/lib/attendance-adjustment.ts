@@ -17,11 +17,22 @@ export interface AdjustmentMetrics {
  * thành Date object UTC lưu trữ vào DB.
  */
 export function combineDateAndTimeString(dateStr: string, timeStr: string): Date {
+  if (!timeStr || !timeStr.trim()) {
+    return new Date(NaN)
+  }
   const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr
   const [year, month, day] = cleanDate.split('-').map(Number)
-  const [hours, minutes] = timeStr.split(':').map(Number)
+  const parts = timeStr.trim().split(':').map(Number)
+  const hours = parts[0]
+  const minutes = parts[1] ?? 0
+  const seconds = parts[2] ?? 0
+
+  if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) {
+    return new Date(NaN)
+  }
+
   // Giờ VN là UTC+7 -> UTC = VN - 7
-  return new Date(Date.UTC(year, month - 1, day, hours - 7, minutes, 0, 0))
+  return new Date(Date.UTC(year, month - 1, day, hours - 7, minutes, seconds, 0))
 }
 
 /**
@@ -76,6 +87,20 @@ export function validateAdjustmentTimes(
     return {
       valid: false,
       error: 'Cần cung cấp ít nhất một mốc giờ check-in hoặc check-out đề xuất',
+    }
+  }
+
+  if (requestedCheckIn && isNaN(requestedCheckIn.getTime())) {
+    return {
+      valid: false,
+      error: 'Thời gian check-in đề xuất không hợp lệ',
+    }
+  }
+
+  if (requestedCheckOut && isNaN(requestedCheckOut.getTime())) {
+    return {
+      valid: false,
+      error: 'Thời gian check-out đề xuất không hợp lệ',
     }
   }
 
@@ -253,9 +278,13 @@ export async function applyAttendanceAdjustment(
       },
       update: {
         checkInTime: effectiveCheckInTime,
-        checkInMethod: 'MANUAL',
+        checkInMethod: adjustment.requestedCheckIn
+          ? 'MANUAL'
+          : (existingRecord?.checkInMethod || 'MANUAL'),
         checkOutTime: effectiveCheckOutTime,
-        checkOutMethod: 'MANUAL',
+        checkOutMethod: adjustment.requestedCheckOut
+          ? 'MANUAL'
+          : (existingRecord?.checkOutMethod || 'MANUAL'),
         isManualEntry: true,
         workDuration,
         workDays,

@@ -86,22 +86,14 @@ export default function AttendanceAdjustmentApprovalTab({
       if (selectedStatus) params.append('status', selectedStatus)
       if (selectedBranch) params.append('branchId', selectedBranch)
       if (selectedType) params.append('type', selectedType)
+      if (searchQuery.trim()) params.append('search', searchQuery.trim())
       params.append('page', page.toString())
       params.append('limit', '15')
 
       const res = await fetch(`/api/attendance/adjustments?${params.toString()}`)
       const data = await res.json()
       if (data.success && data.data) {
-        let items: AdjustmentApprovalItem[] = data.data.adjustments || []
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase().trim()
-          items = items.filter(
-            (i) =>
-              i.employee.fullName.toLowerCase().includes(q) ||
-              i.employee.employeeCode.toLowerCase().includes(q)
-          )
-        }
-        setAdjustments(items)
+        setAdjustments(data.data.adjustments || [])
         setTotalPages(data.data.pagination?.totalPages || 1)
         setTotalCount(data.data.pagination?.total || 0)
       } else {

@@ -127,10 +127,22 @@ describe('Attendance Adjustment Feature', () => {
       expect(date.toISOString()).toBe('2026-11-12T01:30:00.000Z')
     })
 
+    it('combineDateAndTimeString trả về Invalid Date nếu chuỗi giờ không hợp lệ', () => {
+      const invalid = combineDateAndTimeString('2026-11-12', 'invalid')
+      expect(isNaN(invalid.getTime())).toBe(true)
+    })
+
     it('validateAdjustmentTimes từ chối nếu không cung cấp cả 2 mốc giờ', () => {
       const result = validateAdjustmentTimes(null, null)
       expect(result.valid).toBe(false)
       expect(result.error).toContain('Cần cung cấp ít nhất một mốc giờ')
+    })
+
+    it('validateAdjustmentTimes từ chối nếu truyền Date không hợp lệ (NaN)', () => {
+      const invalidDate = new Date(NaN)
+      const validDate = new Date('2026-11-12T01:00:00Z')
+      expect(validateAdjustmentTimes(invalidDate, validDate).valid).toBe(false)
+      expect(validateAdjustmentTimes(validDate, invalidDate).valid).toBe(false)
     })
 
     it('validateAdjustmentTimes từ chối nếu requestedCheckOut <= requestedCheckIn', () => {
@@ -252,6 +264,60 @@ describe('Attendance Adjustment Feature', () => {
       expect(json.message).toContain('đang chờ duyệt')
     })
 
+    it('trả về 422 nếu định dạng giờ đề xuất không hợp lệ', async () => {
+      const req = new NextRequest('http://localhost:3000/api/attendance/adjustments', {
+        method: 'POST',
+        body: JSON.stringify({
+          date: '2026-11-10',
+          type: 'FORGOT_CHECKIN',
+          requestedCheckIn: 'not-a-time',
+          reason: 'Lý do hợp lệ trên 5 ký tự',
+        }),
+      })
+      const res = await postAdjustmentsHandler(req)
+      expect(res.status).toBe(422)
+    })
+
+    it('trả về 400 nếu FORGOT_CHECKIN mà ngày đó chưa có check-out thực tế và không cung cấp requestedCheckOut', async () => {
+      mockPrisma.attendanceAdjustment.findFirst.mockResolvedValue(null)
+      mockPrisma.attendanceRecord.findUnique.mockResolvedValue(null) // Không có check-out
+
+      const req = new NextRequest('http://localhost:3000/api/attendance/adjustments', {
+        method: 'POST',
+        body: JSON.stringify({
+          date: '2026-11-10',
+          type: 'FORGOT_CHECKIN',
+          requestedCheckIn: '08:00',
+          reason: 'Quên check-in sáng',
+        }),
+      })
+      const res = await postAdjustmentsHandler(req)
+      const json = await res.json()
+      expect(res.status).toBe(400)
+      expect(json.message).toContain('chưa có lượt check-out thực tế')
+    })
+
+    it('trả về 400 nếu FORGOT_CHECKOUT mà requestedCheckOut trước giờ check-in thực tế', async () => {
+      mockPrisma.attendanceAdjustment.findFirst.mockResolvedValue(null)
+      mockPrisma.attendanceRecord.findUnique.mockResolvedValue({
+        checkInTime: new Date('2026-11-10T02:00:00Z'), // 09:00 VN
+      })
+
+      const req = new NextRequest('http://localhost:3000/api/attendance/adjustments', {
+        method: 'POST',
+        body: JSON.stringify({
+          date: '2026-11-10',
+          type: 'FORGOT_CHECKOUT',
+          requestedCheckOut: '08:00', // 08:00 < 09:00
+          reason: 'Quên check-out chiều',
+        }),
+      })
+      const res = await postAdjustmentsHandler(req)
+      const json = await res.json()
+      expect(res.status).toBe(400)
+      expect(json.message).toContain('phải sau giờ check-in thực tế')
+    })
+
     it('tạo đơn giải trình thành công và trả về 201', async () => {
       mockPrisma.attendanceAdjustment.findFirst.mockResolvedValue(null)
       mockPrisma.attendanceAdjustment.create.mockResolvedValue({
@@ -340,6 +406,29 @@ describe('Attendance Adjustment Feature', () => {
         })
       )
     })
+
+    it('tìm kiếm theo tên nhân viên hoặc mã nhân viên qua tham số search', async () => {
+      mockSession.mockResolvedValue(mockBranchAdminUser)
+      mockPrisma.attendanceAdjustment.count.mockResolvedValue(1)
+      mockPrisma.attendanceAdjustment.findMany.mockResolvedValue([])
+
+      const req = new NextRequest('http://localhost:3000/api/attendance/adjustments?search=NV001')
+      await getAdjustmentsHandler(req)
+
+      expect(mockPrisma.attendanceAdjustment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            employee: expect.objectContaining({
+              branchId: 'br_hn',
+              OR: [
+                { fullName: { contains: 'NV001', mode: 'insensitive' } },
+                { employeeCode: { contains: 'NV001', mode: 'insensitive' } },
+              ],
+            }),
+          }),
+        })
+      )
+    })
   })
 
   // ========================================================
@@ -370,6 +459,27 @@ describe('Attendance Adjustment Feature', () => {
         params: Promise.resolve({ id: 'adj_nonexistent' }),
       })
       expect(res.status).toBe(404)
+    })
+
+    it('trả về 403 nếu Branch Admin cố tình tự phê duyệt đơn giải trình của chính mình', async () => {
+      mockSession.mockResolvedValue(mockBranchAdminUser) // employee id: emp_admin_hn
+      mockPrisma.attendanceAdjustment.findUnique.mockResolvedValue({
+        id: 'adj_self',
+        employeeId: 'emp_admin_hn', // chính chủ Branch Admin
+        status: 'PENDING',
+        employee: { id: 'emp_admin_hn', branchId: 'br_hn' },
+      })
+
+      const req = new NextRequest('http://localhost:3000/api/attendance/adjustments/adj_self/approve', {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'APPROVED' }),
+      })
+      const res = await approveAdjustmentHandler(req, {
+        params: Promise.resolve({ id: 'adj_self' }),
+      })
+      const json = await res.json()
+      expect(res.status).toBe(403)
+      expect(json.message).toContain('không thể tự phê duyệt')
     })
 
     it('trả về 403 nếu Branch Admin phê duyệt nhân viên thuộc chi nhánh khác', async () => {

@@ -73,6 +73,20 @@ export async function PATCH(
       )
     }
 
+    // Ngăn chặn tự phê duyệt đơn của chính mình (ngoại trừ Super Admin)
+    const currentEmpId = session.user.employee?.id
+    if (
+      session.user.role !== UserRole.SUPER_ADMIN &&
+      currentEmpId &&
+      adjustment.employeeId === currentEmpId
+    ) {
+      return errorResponse(
+        ErrorCodes.FORBIDDEN,
+        'Bạn không thể tự phê duyệt đơn giải trình của chính mình',
+        403
+      )
+    }
+
     // Branch Admin chỉ duyệt nhân viên chi nhánh mình
     if (session.user.role === UserRole.BRANCH_ADMIN) {
       const userBranchId = session.user.employee?.branchId
@@ -131,10 +145,14 @@ export async function PATCH(
     return successResponse(responsePayload)
   } catch (error: any) {
     console.error('Error approving attendance adjustment:', error)
+    const isValidationErr =
+      error.message?.includes('Thời gian check-out') ||
+      error.message?.includes('không tồn tại') ||
+      error.message?.includes('đã được xử lý')
     return errorResponse(
-      ErrorCodes.INTERNAL_ERROR,
+      isValidationErr ? ErrorCodes.VALIDATION_ERROR : ErrorCodes.INTERNAL_ERROR,
       error.message || 'Lỗi hệ thống khi phê duyệt đơn giải trình',
-      500
+      isValidationErr ? 400 : 500
     )
   }
 }

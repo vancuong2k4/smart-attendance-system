@@ -57,9 +57,27 @@ export default function AttendanceAdjustmentModal({
       return
     }
 
+    if (type === 'FORGOT_BOTH' && (!payload.requestedCheckIn || !payload.requestedCheckOut)) {
+      setError('Khi chọn quên cả check-in và check-out, vui lòng nhập đầy đủ cả 2 mốc giờ')
+      return
+    }
+
     if (payload.requestedCheckIn && payload.requestedCheckOut && payload.requestedCheckIn >= payload.requestedCheckOut) {
       setError('Giờ check-out đề xuất phải sau giờ check-in đề xuất')
       return
+    }
+
+    if (date === todayStr) {
+      const now = new Date()
+      const currentHoursMinutes = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      if (payload.requestedCheckIn && payload.requestedCheckIn > currentHoursMinutes) {
+        setError('Giờ check-in đề xuất không thể ở thời điểm tương lai của hôm nay')
+        return
+      }
+      if (payload.requestedCheckOut && payload.requestedCheckOut > currentHoursMinutes) {
+        setError('Giờ check-out đề xuất không thể ở thời điểm tương lai của hôm nay')
+        return
+      }
     }
 
     try {

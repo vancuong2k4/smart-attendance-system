@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get('type')
     const employeeId = searchParams.get('employeeId')
     const branchId = searchParams.get('branchId')
+    const search = searchParams.get('search')?.trim()
     const from = searchParams.get('from')
     const to = searchParams.get('to')
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
@@ -48,7 +49,17 @@ export async function GET(req: NextRequest) {
           403
         )
       }
-      where.employee = { branchId: userBranchId }
+      where.employee = {
+        branchId: userBranchId,
+        ...(search
+          ? {
+              OR: [
+                { fullName: { contains: search, mode: 'insensitive' } },
+                { employeeCode: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      }
       if (employeeId) {
         where.employeeId = employeeId
       }
@@ -57,6 +68,12 @@ export async function GET(req: NextRequest) {
       const employeeConditions: Prisma.EmployeeWhereInput = {}
       if (branchId) {
         employeeConditions.branchId = branchId
+      }
+      if (search) {
+        employeeConditions.OR = [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { employeeCode: { contains: search, mode: 'insensitive' } },
+        ]
       }
       if (employeeId) {
         where.employeeId = employeeId
@@ -231,6 +248,76 @@ export async function POST(req: NextRequest) {
         timeValidation.error || 'Thời gian đề xuất không hợp lệ',
         400
       )
+    }
+
+    const now = new Date()
+    if (dateStr === todayStr) {
+      if (requestedCheckIn && requestedCheckIn.getTime() > now.getTime()) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Thời gian check-in đề xuất không thể ở thời điểm tương lai',
+          400
+        )
+      }
+      if (requestedCheckOut && requestedCheckOut.getTime() > now.getTime()) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Thời gian check-out đề xuất không thể ở thời điểm tương lai',
+          400
+        )
+      }
+    }
+
+    // Kiểm tra tính tương thích với bản ghi điểm danh hiện có
+    const existingRecord = await prisma.attendanceRecord.findUnique({
+      where: {
+        employeeId_date: {
+          employeeId,
+          date: dateOnly,
+        },
+      },
+    })
+
+    if (type === 'FORGOT_BOTH' && (!requestedCheckIn || !requestedCheckOut)) {
+      return errorResponse(
+        ErrorCodes.VALIDATION_ERROR,
+        'Khi chọn quên cả check-in và check-out, vui lòng nhập đầy đủ cả 2 mốc giờ',
+        400
+      )
+    }
+
+    if (type === 'FORGOT_CHECKIN' && !requestedCheckOut) {
+      if (!existingRecord?.checkOutTime) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Ngày này chưa có lượt check-out thực tế trên hệ thống. Vui lòng chọn loại "Quên cả check-in và check-out" để đề xuất cả hai mốc giờ.',
+          400
+        )
+      }
+      if (requestedCheckIn && requestedCheckIn.getTime() >= existingRecord.checkOutTime.getTime()) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Giờ check-in đề xuất phải trước giờ check-out thực tế đã ghi nhận',
+          400
+        )
+      }
+    }
+
+    if (type === 'FORGOT_CHECKOUT' && !requestedCheckIn) {
+      if (!existingRecord?.checkInTime) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Ngày này chưa có lượt check-in thực tế trên hệ thống. Vui lòng chọn loại "Quên cả check-in và check-out" để đề xuất cả hai mốc giờ.',
+          400
+        )
+      }
+      if (requestedCheckOut && requestedCheckOut.getTime() <= existingRecord.checkInTime.getTime()) {
+        return errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          'Giờ check-out đề xuất phải sau giờ check-in thực tế đã ghi nhận',
+          400
+        )
+      }
     }
 
     const adjustment = await prisma.attendanceAdjustment.create({
