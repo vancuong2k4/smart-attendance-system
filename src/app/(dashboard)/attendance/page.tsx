@@ -17,9 +17,12 @@ import {
   Eye,
   X,
   Maximize2,
+  FileText,
 } from 'lucide-react'
 import AttendanceMap from '@/components/attendance/AttendanceMap'
 import CameraSelfie from '@/components/attendance/CameraSelfie'
+import AttendanceAdjustmentModal from '@/components/attendance/AttendanceAdjustmentModal'
+import AttendanceAdjustmentList from '@/components/attendance/AttendanceAdjustmentList'
 import { calculateDistance, isWithinRadius } from '@/lib/gps'
 import { formatVietnamTime, formatVietnamDateDisplay, formatDuration } from '@/lib/attendance'
 
@@ -112,6 +115,11 @@ export default function AttendancePage() {
     type: 'success' | 'error' | 'info'
     message: string
   } | null>(null)
+
+  // Adjustment Modal & Tab state
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'ADJUSTMENTS'>('ATTENDANCE')
+  const [adjustmentRefreshKey, setAdjustmentRefreshKey] = useState(0)
 
   // Clock ticker
   useEffect(() => {
@@ -417,28 +425,40 @@ export default function AttendancePage() {
           </p>
         </div>
 
-        {/* Live Digital Clock */}
-        <div className="flex items-center gap-4 bg-gradient-to-r from-indigo-50 to-blue-50 px-5 py-3 rounded-xl border border-indigo-100">
-          <div className="text-right">
-            <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">
-              {currentTime
-                ? currentTime.toLocaleDateString('vi-VN', {
-                    weekday: 'long',
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                  })
-                : '...'}
-            </div>
-            <div className="text-2xl font-black font-mono text-gray-900 tracking-tight">
-              {currentTime
-                ? currentTime.toLocaleTimeString('vi-VN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false,
-                  })
-                : '--:--:--'}
+        {/* Header Actions: Adjustment Button & Live Clock */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowAdjustmentModal(true)}
+            className="px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm hover:shadow transition flex items-center gap-2 active:scale-95"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Giải trình chấm công</span>
+          </button>
+
+          {/* Live Digital Clock */}
+          <div className="flex items-center gap-4 bg-gradient-to-r from-indigo-50 to-blue-50 px-5 py-2.5 rounded-xl border border-indigo-100">
+            <div className="text-right">
+              <div className="text-xs font-medium text-indigo-600 uppercase tracking-wide">
+                {currentTime
+                  ? currentTime.toLocaleDateString('vi-VN', {
+                      weekday: 'long',
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                    })
+                  : '...'}
+              </div>
+              <div className="text-2xl font-black font-mono text-gray-900 tracking-tight">
+                {currentTime
+                  ? currentTime.toLocaleTimeString('vi-VN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false,
+                    })
+                  : '--:--:--'}
+              </div>
             </div>
           </div>
         </div>
@@ -794,17 +814,65 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* Recent History Table */}
+      {/* Attendance History & Personal Adjustments Section */}
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-indigo-600" />
-            Lịch sử chấm công các ngày gần nhất
-          </h2>
-          <span className="text-xs text-gray-500 font-medium">
-            Hiển thị tối đa 7 ngày gần đây
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('ATTENDANCE')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                activeTab === 'ATTENDANCE'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Lịch sử chấm công (7 ngày)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ADJUSTMENTS')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                activeTab === 'ADJUSTMENTS'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Đơn giải trình của tôi
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAdjustmentModal(true)}
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200 transition flex items-center gap-1"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Tạo đơn giải trình mới
+          </button>
         </div>
+
+        {activeTab === 'ADJUSTMENTS' ? (
+          <AttendanceAdjustmentList
+            refreshTrigger={adjustmentRefreshKey}
+            onAdjustmentChanged={() => {
+              loadData()
+              setAdjustmentRefreshKey((k) => k + 1)
+            }}
+          />
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                Lịch sử chấm công các ngày gần nhất
+              </h2>
+              <span className="text-xs text-gray-500 font-medium">
+                Hiển thị tối đa 7 ngày gần đây
+              </span>
+            </div>
 
         {history.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">
@@ -1088,6 +1156,20 @@ export default function AttendancePage() {
           </div>
         </div>
       )}
+
+      {/* Attendance Adjustment Modal */}
+      <AttendanceAdjustmentModal
+        isOpen={showAdjustmentModal}
+        onClose={() => setShowAdjustmentModal(false)}
+        onSuccess={() => {
+          setAdjustmentRefreshKey((k) => k + 1)
+          setActiveTab('ADJUSTMENTS')
+          setAlert({
+            type: 'success',
+            message: 'Nộp đơn giải trình bù công thành công. Đơn đang chờ quản lý xét duyệt.',
+          })
+        }}
+      />
     </div>
   )
 }

@@ -37,7 +37,7 @@ export default async function DashboardPage() {
   let adminRecentPendingLeaves: any[] = []
 
   if (isEmployee && userEmpId) {
-    const [empProfile, monthAttendance, pendingLeaves, pendingOTs, monthOTs, recentLeaves] =
+    const [empProfile, monthAttendance, pendingLeaves, pendingOTs, pendingAdjustments, monthOTs, recentLeaves] =
       await Promise.all([
         prisma.employee.findUnique({
           where: { id: userEmpId },
@@ -62,6 +62,12 @@ export default async function DashboardPage() {
             status: LeaveStatus.PENDING,
           },
         }),
+        prisma.attendanceAdjustment.count({
+          where: {
+            employeeId: userEmpId,
+            status: 'PENDING',
+          },
+        }),
         prisma.overtimeRequest.findMany({
           where: {
             employeeId: userEmpId,
@@ -80,7 +86,7 @@ export default async function DashboardPage() {
 
     empWorkDays = monthAttendance.reduce((acc, curr) => acc + (curr.workDays || 0), 0)
     empLeaveBalance = empProfile?.annualLeaveBalance ?? 0
-    empPendingCount = pendingLeaves + pendingOTs
+    empPendingCount = pendingLeaves + pendingOTs + pendingAdjustments
     empOtHours = monthOTs.reduce((acc, curr) => acc + curr.hours, 0)
     empRecentLeaves = recentLeaves
   } else {
@@ -88,7 +94,7 @@ export default async function DashboardPage() {
     const branchFilter =
       userRole === UserRole.BRANCH_ADMIN && userBranchId ? { branchId: userBranchId } : {}
 
-    const [totalEmps, presentCount, pendingLeaves, pendingOTs, pendingList] = await Promise.all([
+    const [totalEmps, presentCount, pendingLeaves, pendingOTs, pendingAdjustments, pendingList] = await Promise.all([
       prisma.employee.count({
         where: {
           ...branchFilter,
@@ -115,6 +121,12 @@ export default async function DashboardPage() {
           status: LeaveStatus.PENDING,
         },
       }),
+      prisma.attendanceAdjustment.count({
+        where: {
+          employee: branchFilter,
+          status: 'PENDING',
+        },
+      }),
       prisma.leaveRequest.findMany({
         where: {
           employee: branchFilter,
@@ -134,7 +146,7 @@ export default async function DashboardPage() {
     adminTotalEmployees = totalEmps
     adminPresentToday = presentCount
     adminAbsentToday = Math.max(0, totalEmps - presentCount)
-    adminPendingRequests = pendingLeaves + pendingOTs
+    adminPendingRequests = pendingLeaves + pendingOTs + pendingAdjustments
     adminRecentPendingLeaves = pendingList
   }
 
@@ -234,7 +246,7 @@ export default async function DashboardPage() {
               icon={<FileText className="text-orange-600" size={24} />}
               label="Đơn chờ duyệt"
               value={`${adminPendingRequests} đơn`}
-              subtext="Phép & Làm thêm giờ"
+              subtext="Phép, OT & Giải trình công"
               bg="bg-orange-50"
             />
           </>

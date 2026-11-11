@@ -19,7 +19,9 @@ import {
   X,
   ShieldCheck,
   MapPin,
+  FileText,
 } from 'lucide-react'
+import AttendanceAdjustmentApprovalTab from '@/components/attendance/AttendanceAdjustmentApprovalTab'
 import { formatVietnamTime, formatVietnamDateDisplay, formatDuration, getVietnamDateString } from '@/lib/attendance'
 import { calculateDistance } from '@/lib/gps'
 
@@ -123,6 +125,26 @@ export default function AttendanceManagePage() {
   const [totalCount, setTotalCount] = useState<number>(0)
   const limit = 20
 
+  // Tabs: Records vs Adjustments
+  const [activeMainTab, setActiveMainTab] = useState<'RECORDS' | 'ADJUSTMENTS'>('RECORDS')
+  const [pendingAdjustmentsCount, setPendingAdjustmentsCount] = useState<number>(0)
+
+  const fetchPendingAdjustmentsCount = useCallback(async () => {
+    try {
+      const res = await fetch('/api/attendance/adjustments?status=PENDING&limit=1')
+      const data = await res.json()
+      if (data.success && data.data?.pagination?.total !== undefined) {
+        setPendingAdjustmentsCount(data.data.pagination.total)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchPendingAdjustmentsCount()
+  }, [fetchPendingAdjustmentsCount])
+
   // Load Branch & Department options
   useEffect(() => {
     async function loadOptions() {
@@ -219,6 +241,7 @@ export default function AttendanceManagePage() {
           onClick={() => {
             setPage(1)
             fetchRecords()
+            fetchPendingAdjustmentsCount()
           }}
           disabled={loading}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-sm"
@@ -228,7 +251,57 @@ export default function AttendanceManagePage() {
         </button>
       </div>
 
-      {/* KPI / Summary Cards */}
+      {/* Top Level Navigation Tabs */}
+      <div className="flex items-center gap-3 border-b border-gray-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('RECORDS')}
+          className={`px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 ${
+            activeMainTab === 'RECORDS'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <UserCheck className="w-4 h-4" />
+          <span>Dữ liệu chấm công</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveMainTab('ADJUSTMENTS')}
+          className={`px-4 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2 relative ${
+            activeMainTab === 'ADJUSTMENTS'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Xét duyệt giải trình</span>
+          {pendingAdjustmentsCount > 0 && (
+            <span
+              className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${
+                activeMainTab === 'ADJUSTMENTS'
+                  ? 'bg-white text-indigo-700'
+                  : 'bg-rose-500 text-white'
+              }`}
+            >
+              {pendingAdjustmentsCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeMainTab === 'ADJUSTMENTS' ? (
+        <AttendanceAdjustmentApprovalTab
+          branches={branches}
+          onApprovalSuccess={() => {
+            fetchRecords()
+            fetchPendingAdjustmentsCount()
+          }}
+        />
+      ) : (
+        <>
+          {/* KPI / Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -741,6 +814,9 @@ export default function AttendanceManagePage() {
           </div>
         )}
       </div>
+      </>
+      )}
+
       {/* Selfie Lightbox Modal for Admin / HR */}
       {selfieModal && (
         <div
