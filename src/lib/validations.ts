@@ -55,20 +55,44 @@ export const manualAttendanceSchema = z.object({
 // ==========================================
 
 export const createEmployeeSchema = z.object({
-  email: z.email('Email không hợp lệ'),
-  password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự').optional(),
-  employeeCode: z.string().min(2).max(20),
-  branchId: z.string().cuid(),
-  departmentId: z.string().cuid(),
-  fullName: z.string().min(2).max(100),
-  dateOfBirth: z.string().optional(),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
-  phoneNumber: z.string().optional(),
-  position: z.string().max(100).optional(),
-  startDate: z.string(),
+  email: z.string().email('Email không hợp lệ'),
+  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').optional().or(z.literal('')),
+  employeeCode: z.string().min(2, 'Mã nhân viên tối thiểu 2 ký tự').max(20, 'Mã nhân viên tối đa 20 ký tự'),
+  branchId: z.string().min(1, 'Vui lòng chọn chi nhánh'),
+  departmentId: z.string().min(1, 'Vui lòng chọn phòng ban'),
+  fullName: z.string().min(2, 'Họ tên tối thiểu 2 ký tự').max(100, 'Họ tên tối đa 100 ký tự'),
+  dateOfBirth: z.string().optional().nullable(),
+  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional().nullable(),
+  phoneNumber: z.string().max(20).optional().nullable(),
+  address: z.string().max(500).optional().nullable(),
+  position: z.string().max(100).optional().nullable(),
+  startDate: z.string().optional(),
   employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'PROBATION']).default('FULL_TIME'),
   role: z.enum(['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER', 'EMPLOYEE']).default('EMPLOYEE'),
 })
+
+export const updateEmployeeSchema = z.object({
+  email: z.string().email('Email không hợp lệ').optional(),
+  password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').optional().or(z.literal('')),
+  employeeCode: z.string().min(2, 'Mã nhân viên tối thiểu 2 ký tự').max(20).optional(),
+  branchId: z.string().min(1).optional(),
+  departmentId: z.string().min(1).optional(),
+  fullName: z.string().min(2, 'Họ tên tối thiểu 2 ký tự').max(100).optional(),
+  dateOfBirth: z.string().optional().nullable(),
+  gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional().nullable(),
+  phoneNumber: z.string().max(20).optional().nullable(),
+  address: z.string().max(500).optional().nullable(),
+  position: z.string().max(100).optional().nullable(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional().nullable(),
+  employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'PROBATION']).optional(),
+  role: z.enum(['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER', 'EMPLOYEE']).optional(),
+  isActive: z.boolean().optional(),
+  annualLeaveBalance: z.number().min(0).optional(),
+  sickLeaveBalance: z.number().min(0).optional(),
+})
+
+export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>
 
 // ==========================================
 // ==========================================

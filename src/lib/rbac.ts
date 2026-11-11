@@ -18,7 +18,7 @@ export function isSuperAdmin(role: string): boolean {
  * Kiểm tra có thể quản lý nhân viên không
  */
 export function canManageEmployees(role: string): boolean {
-  return hasRole(role, [UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN])
+  return hasRole(role, [UserRole.SUPER_ADMIN, UserRole.BRANCH_ADMIN, UserRole.HR_MANAGER])
 }
 
 /**
