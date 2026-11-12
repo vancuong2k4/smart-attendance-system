@@ -28,6 +28,51 @@ model Company {
   updatedAt DateTime @updatedAt
 
   branches Branch[]
+  settings SystemSetting?
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  companyId String   @unique
+
+  // 1. Attendance & GPS Rules
+  checkInWindowStart    String   @default("06:00")
+  checkInWindowEnd      String   @default("10:30")
+  checkOutWindowStart   String   @default("11:00")
+  checkOutWindowEnd     String   @default("23:00")
+  defaultLateThreshold  Int      @default(15)
+  defaultEarlyThreshold Int      @default(15)
+  requireSelfie         Boolean  @default(false)
+  requireGps            Boolean  @default(true)
+  maxGpsAccuracyMeters  Int      @default(50)
+
+  // 2. Payroll & Cycle Settings
+  payrollStartDay       Int      @default(1)
+  payrollEndDay         Int      @default(31)
+  attendanceLockDay     Int      @default(5)
+  standardWorkDaysMonth Float    @default(22.0)
+  otRateWeekday         Float    @default(1.5)
+  otRateWeekend         Float    @default(2.0)
+  otRateHoliday         Float    @default(3.0)
+
+  // 3. Leave Policy Rules
+  defaultAnnualLeave    Float    @default(12.0)
+  defaultSickLeave      Float    @default(10.0)
+  allowCarryOverLeave   Boolean  @default(true)
+  maxCarryOverDays      Float    @default(5.0)
+  carryOverDeadline     Int      @default(3) // Tháng 3 hàng năm
+
+  // 4. Notifications & Security
+  notifyLateArrival     Boolean  @default(true)
+  notifyEarlyLeave      Boolean  @default(true)
+  checkInReminder       Boolean  @default(true)
+  checkOutReminder      Boolean  @default(true)
+  sessionTimeoutMinutes Int      @default(1440) // 24 giờ
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Branch {
