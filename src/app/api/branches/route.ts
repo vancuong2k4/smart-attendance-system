@@ -100,11 +100,12 @@ export async function POST(req: NextRequest) {
 
     const validation = branchCreateSchema.safeParse(body)
     if (!validation.success) {
+      const firstIssue = validation.error.issues?.[0] || validation.error.errors?.[0]
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
-        validation.error.errors[0]?.message || 'Dữ liệu không hợp lệ',
+        firstIssue?.message || 'Dữ liệu không hợp lệ',
         422,
-        validation.error.errors
+        validation.error.issues || validation.error.errors
       )
     }
 
@@ -174,7 +175,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return successResponse(branch, 'Tạo chi nhánh mới thành công', 201)
+    return successResponse(branch, 201)
   } catch (error: any) {
     console.error('Error creating branch:', error)
     return errorResponse(ErrorCodes.INTERNAL_ERROR, 'Không thể tạo chi nhánh mới', 500)

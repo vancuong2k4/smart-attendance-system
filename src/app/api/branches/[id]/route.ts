@@ -125,11 +125,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const validation = branchUpdateSchema.safeParse(body)
     if (!validation.success) {
+      const firstIssue = validation.error.issues?.[0] || validation.error.errors?.[0]
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
-        validation.error.errors[0]?.message || 'Dữ liệu không hợp lệ',
+        firstIssue?.message || 'Dữ liệu không hợp lệ',
         422,
-        validation.error.errors
+        validation.error.issues || validation.error.errors
       )
     }
 
@@ -174,7 +175,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       },
     })
 
-    return successResponse(updatedBranch, 'Cập nhật thông tin chi nhánh thành công')
+    return successResponse(updatedBranch)
   } catch (error: any) {
     console.error('Error updating branch:', error)
     return errorResponse(ErrorCodes.INTERNAL_ERROR, 'Không thể cập nhật chi nhánh', 500)
@@ -234,10 +235,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       prisma.branch.delete({ where: { id } }),
     ])
 
-    return successResponse(
-      { id, name: branch.name, code: branch.code },
-      `Đã xóa chi nhánh "${branch.name}" thành công`
-    )
+    return successResponse({ id, name: branch.name, code: branch.code })
   } catch (error: any) {
     console.error('Error deleting branch:', error)
     return errorResponse(ErrorCodes.INTERNAL_ERROR, 'Không thể xóa chi nhánh', 500)

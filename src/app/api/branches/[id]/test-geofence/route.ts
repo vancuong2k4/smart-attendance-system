@@ -46,11 +46,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const validation = geofenceTestSchema.safeParse(body)
     if (!validation.success) {
+      const firstIssue = validation.error.issues?.[0] || validation.error.errors?.[0]
       return errorResponse(
         ErrorCodes.VALIDATION_ERROR,
-        validation.error.errors[0]?.message || 'Tọa độ không hợp lệ',
+        firstIssue?.message || 'Tọa độ không hợp lệ',
         422,
-        validation.error.errors
+        validation.error.issues || validation.error.errors
       )
     }
 
