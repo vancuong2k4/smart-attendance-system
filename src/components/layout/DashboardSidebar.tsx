@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Clock,
+  CalendarDays,
   Users,
   FileText,
   BarChart3,
@@ -42,6 +43,12 @@ const navItems: NavItem[] = [
     label: 'Quản lý chấm công',
     icon: <Clock size={18} />,
     roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER'],
+  },
+  {
+    href: '/schedules',
+    label: 'Ca làm việc',
+    icon: <CalendarDays size={18} />,
+    roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
   },
   {
     href: '/employees',
