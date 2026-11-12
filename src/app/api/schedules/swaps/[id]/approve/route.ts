@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { managerApprovalSchema } from '@/lib/shift-validation'
+import { notifyShiftSwapDecision } from '@/lib/notifications'
 import { UserRole, ShiftSwapStatus } from '@prisma/client'
 
 interface RouteContext {
@@ -131,7 +132,26 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             approvedAt: new Date(),
           },
         }),
+
+        // 4. Ghi Audit Log truy vết
+        prisma.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: 'SHIFT_SWAP_APPROVED',
+            entity: 'ShiftSwapRequest',
+            entityId: id,
+            oldData: { status: swap.status },
+            newData: { status: ShiftSwapStatus.APPROVED, approvedById: session.user.id },
+          },
+        }),
       ])
+
+      // Gửi thông báo phê duyệt tới cả 2 nhân viên
+      await notifyShiftSwapDecision({
+        requesterId: swap.requesterId,
+        targetEmployeeId: swap.targetEmployeeId,
+        action: 'APPROVED',
+      })
 
       const result = await prisma.shiftSwapRequest.findUnique({ where: { id } })
       return successResponse(result)
@@ -145,6 +165,27 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           approvedAt: new Date(),
         },
       })
+
+      // Ghi Audit Log từ chối
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: 'SHIFT_SWAP_REJECTED',
+          entity: 'ShiftSwapRequest',
+          entityId: id,
+          oldData: { status: swap.status },
+          newData: { status: ShiftSwapStatus.REJECTED, rejectReason },
+        },
+      })
+
+      // Gửi thông báo từ chối tới cả 2 nhân viên
+      await notifyShiftSwapDecision({
+        requesterId: swap.requesterId,
+        targetEmployeeId: swap.targetEmployeeId,
+        action: 'REJECTED',
+        rejectReason: rejectReason || 'Quản lý từ chối yêu cầu đổi ca',
+      })
+
       return successResponse(updated)
     }
   } catch (error: any) {

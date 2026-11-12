@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { peerResponseSchema } from '@/lib/shift-validation'
+import { notifyShiftSwapPeerResponded } from '@/lib/notifications'
 import { ShiftSwapStatus, SwapPeerStatus } from '@prisma/client'
 
 interface RouteContext {
@@ -30,7 +31,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const swapRequest = await prisma.shiftSwapRequest.findUnique({
       where: { id },
       include: {
-        requester: { select: { id: true, fullName: true } },
+        requester: { select: { id: true, fullName: true, branchId: true } },
+        targetEmployee: { select: { id: true, fullName: true, branchId: true } },
       },
     })
 
@@ -82,6 +84,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           status: ShiftSwapStatus.PENDING_MANAGER,
         },
       })
+
+      // Gửi thông báo
+      await notifyShiftSwapPeerResponded({
+        requesterId: swapRequest.requesterId,
+        peerName: swapRequest.targetEmployee.fullName,
+        action: 'ACCEPTED',
+        branchId: swapRequest.targetEmployee.branchId,
+      })
+
       return successResponse(updated)
     } else {
       const updated = await prisma.shiftSwapRequest.update({
@@ -92,6 +103,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           rejectReason: rejectReason || 'Đồng nghiệp từ chối đổi ca',
         },
       })
+
+      // Gửi thông báo
+      await notifyShiftSwapPeerResponded({
+        requesterId: swapRequest.requesterId,
+        peerName: swapRequest.targetEmployee.fullName,
+        action: 'REJECTED',
+        branchId: swapRequest.targetEmployee.branchId,
+        rejectReason: rejectReason || 'Đồng nghiệp từ chối đổi ca',
+      })
+
       return successResponse(updated)
     }
   } catch (error: any) {

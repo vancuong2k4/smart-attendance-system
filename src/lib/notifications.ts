@@ -354,3 +354,126 @@ export async function notifyAdjustmentDecision(
   )
 }
 
+
+/**
+ * Thông báo cho đồng nghiệp khi có yêu cầu đổi ca làm việc
+ */
+export async function notifyShiftSwapRequested(
+  params: {
+    targetEmployeeId: string
+    requesterName: string
+    requesterDate: Date | string
+    targetDate: Date | string
+    requesterScheduleName: string
+    targetScheduleName: string
+  },
+  client: any = prisma
+) {
+  const reqDateStr = formatVietnamDateDisplay(params.requesterDate)
+  const tgtDateStr = formatVietnamDateDisplay(params.targetDate)
+
+  return createNotification(
+    {
+      employeeId: params.targetEmployeeId,
+      type: 'SHIFT_SWAP_REQUESTED',
+      title: 'Yêu cầu đổi ca làm việc mới',
+      message: `${params.requesterName} muốn đổi ca "${params.requesterScheduleName}" (${reqDateStr}) lấy ca "${params.targetScheduleName}" (${tgtDateStr}) của bạn.`,
+      link: '/schedules',
+    },
+    client
+  )
+}
+
+/**
+ * Thông báo khi đồng nghiệp phản hồi yêu cầu đổi ca (Đồng ý hoặc Từ chối)
+ */
+export async function notifyShiftSwapPeerResponded(
+  params: {
+    requesterId: string
+    peerName: string
+    action: 'ACCEPTED' | 'REJECTED'
+    branchId: string
+    rejectReason?: string | null
+  },
+  client: any = prisma
+) {
+  const isAccepted = params.action === 'ACCEPTED'
+
+  // 1. Thông báo cho người yêu cầu
+  await createNotification(
+    {
+      employeeId: params.requesterId,
+      type: isAccepted ? 'SHIFT_SWAP_PEER_ACCEPTED' : 'SHIFT_SWAP_PEER_REJECTED',
+      title: isAccepted
+        ? 'Đồng nghiệp đã đồng ý đổi ca'
+        : 'Đồng nghiệp đã từ chối đổi ca',
+      message: isAccepted
+        ? `${params.peerName} đã đồng ý đổi ca. Yêu cầu đang được gửi lên Quản lý xét duyệt.`
+        : `${params.peerName} đã từ chối yêu cầu đổi ca của bạn.${
+            params.rejectReason ? ` Lý do: ${params.rejectReason}` : ''
+          }`,
+      link: '/schedules',
+    },
+    client
+  )
+
+  // 2. Nếu đồng nghiệp đồng ý, gửi thông báo cho Quản lý chi nhánh & Super Admin để duyệt
+  if (isAccepted) {
+    await createNotificationsForRoles(
+      {
+        roles: [UserRole.BRANCH_ADMIN, UserRole.HR_MANAGER, UserRole.SUPER_ADMIN],
+        branchId: params.branchId,
+        type: 'SHIFT_SWAP_PENDING_APPROVAL',
+        title: 'Đơn đổi ca chờ quản lý phê duyệt',
+        message: `Đơn đổi ca của ${params.peerName} đã được cả 2 bên thống nhất và đang chờ quản lý phê duyệt.`,
+        link: '/schedules',
+      },
+      client
+    )
+  }
+}
+
+/**
+ * Thông báo kết quả xét duyệt đơn đổi ca từ Quản lý
+ */
+export async function notifyShiftSwapDecision(
+  params: {
+    requesterId: string
+    targetEmployeeId: string
+    action: 'APPROVED' | 'REJECTED'
+    rejectReason?: string | null
+  },
+  client: any = prisma
+) {
+  const isApproved = params.action === 'APPROVED'
+
+  const message = isApproved
+    ? 'Đơn đổi ca làm việc của bạn đã được quản lý phê duyệt thành công. Lịch ca của bạn đã được cập nhật.'
+    : `Đơn đổi ca làm việc đã bị quản lý từ chối.${
+        params.rejectReason ? ` Lý do: ${params.rejectReason}` : ''
+      }`
+
+  // Gửi cho cả 2 nhân viên
+  await Promise.all([
+    createNotification(
+      {
+        employeeId: params.requesterId,
+        type: isApproved ? 'SHIFT_SWAP_APPROVED' : 'SHIFT_SWAP_REJECTED',
+        title: isApproved ? 'Đơn đổi ca đã được phê duyệt' : 'Đơn đổi ca bị từ chối',
+        message,
+        link: '/schedules',
+      },
+      client
+    ),
+    createNotification(
+      {
+        employeeId: params.targetEmployeeId,
+        type: isApproved ? 'SHIFT_SWAP_APPROVED' : 'SHIFT_SWAP_REJECTED',
+        title: isApproved ? 'Đơn đổi ca đã được phê duyệt' : 'Đơn đổi ca bị từ chối',
+        message,
+        link: '/schedules',
+      },
+      client
+    ),
+  ])
+}

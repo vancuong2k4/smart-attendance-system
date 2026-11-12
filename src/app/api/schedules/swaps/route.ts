@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { shiftSwapCreateSchema } from '@/lib/shift-validation'
 import { validateSwapEligibility } from '@/lib/shift-engine'
+import { notifyShiftSwapRequested } from '@/lib/notifications'
 import { UserRole, Prisma, ShiftSwapStatus, SwapPeerStatus } from '@prisma/client'
 
 /**
@@ -200,6 +201,16 @@ export async function POST(req: NextRequest) {
         requesterSchedule: { select: { name: true, startTime: true, endTime: true } },
         targetSchedule: { select: { name: true, startTime: true, endTime: true } },
       },
+    })
+
+    // Gửi thông báo cho đồng nghiệp
+    await notifyShiftSwapRequested({
+      targetEmployeeId,
+      requesterName: swapRequest.requester.fullName,
+      requesterDate: swapRequest.requesterDate,
+      targetDate: swapRequest.targetDate,
+      requesterScheduleName: swapRequest.requesterSchedule.name,
+      targetScheduleName: swapRequest.targetSchedule.name,
     })
 
     return successResponse(swapRequest, 201)
