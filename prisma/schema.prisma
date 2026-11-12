@@ -121,11 +121,14 @@ model Employee {
   user             User               @relation(fields: [userId], references: [id])
   branch           Branch             @relation(fields: [branchId], references: [id])
   department       Department         @relation(fields: [departmentId], references: [id])
-  attendances      AttendanceRecord[]
-  leaveRequests    LeaveRequest[]
-  overtimeRequests OvertimeRequest[]
-  notifications    Notification[]
-  adjustments      AttendanceAdjustment[]
+  attendances          AttendanceRecord[]
+  leaveRequests        LeaveRequest[]
+  overtimeRequests     OvertimeRequest[]
+  notifications        Notification[]
+  adjustments          AttendanceAdjustment[]
+  shiftAssignments     ShiftAssignment[]
+  swapRequestsMade     ShiftSwapRequest[]     @relation("RequesterEmployee")
+  swapRequestsReceived ShiftSwapRequest[]     @relation("TargetEmployee")
 }
 
 enum Gender {
@@ -142,7 +145,7 @@ enum EmploymentType {
 }
 
 // ═══════════════════════════════════════
-// WORK SCHEDULE
+// WORK SCHEDULE & SHIFT MANAGEMENT
 // ═══════════════════════════════════════
 
 model WorkSchedule {
@@ -162,7 +165,72 @@ model WorkSchedule {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branch Branch @relation(fields: [branchId], references: [id])
+  branch         Branch             @relation(fields: [branchId], references: [id])
+  assignments    ShiftAssignment[]
+  requesterSwaps ShiftSwapRequest[] @relation("RequesterSchedule")
+  targetSwaps    ShiftSwapRequest[] @relation("TargetSchedule")
+}
+
+model ShiftAssignment {
+  id           String   @id @default(cuid())
+  employeeId   String
+  scheduleId   String
+  date         DateTime @db.Date
+  note         String?
+  assignedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  schedule WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([employeeId, date])
+  @@index([scheduleId])
+}
+
+model ShiftSwapRequest {
+  id                  String          @id @default(cuid())
+  requesterId         String
+  targetEmployeeId    String
+  requesterDate       DateTime        @db.Date
+  requesterScheduleId String
+  targetDate          DateTime        @db.Date
+  targetScheduleId    String
+  reason              String
+  peerStatus          SwapPeerStatus  @default(PENDING)
+  status              ShiftSwapStatus @default(PENDING_PEER)
+  approvedById        String?
+  approvedAt          DateTime?
+  rejectReason        String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  requester         Employee     @relation("RequesterEmployee", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetEmployee    Employee     @relation("TargetEmployee", fields: [targetEmployeeId], references: [id], onDelete: Cascade)
+  requesterSchedule WorkSchedule @relation("RequesterSchedule", fields: [requesterScheduleId], references: [id], onDelete: Cascade)
+  targetSchedule    WorkSchedule @relation("TargetSchedule", fields: [targetScheduleId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId])
+  @@index([targetEmployeeId])
+  @@index([status])
+  @@index([requesterDate])
+  @@index([targetDate])
+}
+
+enum SwapPeerStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ShiftSwapStatus {
+  PENDING_PEER
+  PENDING_MANAGER
+  APPROVED
+  REJECTED
+  CANCELLED
 }
 
 // ═══════════════════════════════════════
