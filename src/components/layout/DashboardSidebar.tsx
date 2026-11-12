@@ -13,6 +13,7 @@ import {
   Building2,
   ChevronLeft,
   X,
+  Trophy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -48,6 +49,12 @@ const navItems: NavItem[] = [
     href: '/schedules',
     label: 'Ca làm việc',
     icon: <CalendarDays size={18} />,
+    roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
+  },
+  {
+    href: '/leaderboard',
+    label: 'Bảng vinh danh',
+    icon: <Trophy size={18} />,
     roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
   },
   {
