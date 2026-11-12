@@ -174,6 +174,8 @@ model Employee {
   shiftAssignments     ShiftAssignment[]
   swapRequestsMade     ShiftSwapRequest[]     @relation("RequesterEmployee")
   swapRequestsReceived ShiftSwapRequest[]     @relation("TargetEmployee")
+  badges               EmployeeBadge[]
+  streaks              AttendanceStreak[]
 }
 
 enum Gender {
@@ -491,4 +493,67 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([userId])
   @@index([createdAt])
+}
+
+
+// ═══════════════════════════════════════
+// GAMIFICATION & ATTENDANCE BADGES
+// ═══════════════════════════════════════
+
+enum BadgeType {
+  EARLY_BIRD
+  PERFECT_WEEK
+  PERFECT_MONTH
+  ON_TIME_HERO
+  OVERTIME_CHAMPION
+  STREAK_MASTER
+  PUNCTUALITY_DIAMOND
+}
+
+enum BadgeTier {
+  BRONZE
+  SILVER
+  GOLD
+  DIAMOND
+}
+
+model EmployeeBadge {
+  id          String    @id @default(cuid())
+  employeeId  String
+  badgeType   BadgeType
+  tier        BadgeTier @default(BRONZE)
+  title       String
+  description String
+  icon        String    @default("award")
+  unlockedAt  DateTime  @default(now())
+  metadata    Json?
+
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, badgeType])
+  @@index([employeeId])
+  @@index([badgeType])
+}
+
+model AttendanceStreak {
+  id               String   @id @default(cuid())
+  employeeId       String
+  currentStreak    Int      @default(0)
+  longestStreak    Int      @default(0)
+  punctualityScore Float    @default(100)
+  totalOnTime      Int      @default(0)
+  totalLate        Int      @default(0)
+  totalEarlyLeave  Int      @default(0)
+  month            Int
+  year             Int
+  rank             Int?
+  branchRank       Int?
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  employee         Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, month, year])
+  @@index([month, year, punctualityScore])
+  @@index([employeeId])
 }
