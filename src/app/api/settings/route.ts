@@ -57,7 +57,7 @@ export async function PATCH(req: NextRequest) {
       return errorResponse(ErrorCodes.BAD_REQUEST, 'Dữ liệu không hợp lệ', 400)
     }
 
-    const validation = systemSettingsUpdateSchema.safeParse(body)
+    const validation = systemSettingsUpdateSchema.partial().safeParse(body)
     if (!validation.success) {
       const firstIssue = validation.error.issues?.[0] || validation.error.errors?.[0]
       return errorResponse(
