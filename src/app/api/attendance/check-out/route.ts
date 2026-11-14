@@ -11,6 +11,7 @@ import {
 } from '@/lib/attendance'
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { saveAttendancePhoto } from '@/lib/storage'
+import { dispatchWebhookEvent, WebhookEvents } from '@/lib/webhooks'
 
 export async function POST(req: NextRequest) {
   try {
@@ -175,6 +176,21 @@ export async function POST(req: NextRequest) {
         status: attendanceStatus,
       },
     })
+
+    // Kích hoạt Webhook thông báo Check-out (Non-blocking)
+    dispatchWebhookEvent(
+      WebhookEvents.ATTENDANCE_CHECK_OUT,
+      {
+        employeeName: employee.fullName,
+        employeeCode: employee.employeeCode,
+        branchName: employee.branch?.name,
+        time: new Date(updatedRecord.checkOutTime!).toLocaleTimeString('vi-VN'),
+        workHours: (updatedRecord.workDuration / 60).toFixed(1),
+        isEarlyLeave: updatedRecord.isEarlyLeave,
+        earlyMinutes: updatedRecord.earlyMinutes,
+      },
+      employee.branch?.id
+    ).catch(() => {})
 
     return successResponse({
       id: updatedRecord.id,

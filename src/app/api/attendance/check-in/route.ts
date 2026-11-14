@@ -12,6 +12,7 @@ import {
 import { errorResponse, successResponse, ErrorCodes } from '@/lib/api-response'
 import { notifyCheckInSuccess } from '@/lib/notifications'
 import { saveAttendancePhoto } from '@/lib/storage'
+import { dispatchWebhookEvent, WebhookEvents } from '@/lib/webhooks'
 
 export async function POST(req: NextRequest) {
   try {
@@ -174,6 +175,35 @@ export async function POST(req: NextRequest) {
       isLate: record.isLate,
       lateMinutes: record.lateMinutes,
     })
+
+    // Kích hoạt Webhook thông báo đa kênh (Non-blocking)
+    dispatchWebhookEvent(
+      WebhookEvents.ATTENDANCE_CHECK_IN,
+      {
+        employeeName: employee.fullName,
+        employeeCode: employee.employeeCode,
+        branchName: branch.name,
+        time: timeFormatted,
+        distanceMeters: Math.round(distance),
+        isLate: record.isLate,
+        lateMinutes: record.lateMinutes,
+      },
+      branch.id
+    ).catch(() => {})
+
+    if (record.isLate) {
+      dispatchWebhookEvent(
+        WebhookEvents.ATTENDANCE_LATE_ALERT,
+        {
+          employeeName: employee.fullName,
+          employeeCode: employee.employeeCode,
+          branchName: branch.name,
+          time: timeFormatted,
+          lateMinutes: record.lateMinutes,
+        },
+        branch.id
+      ).catch(() => {})
+    }
 
     return successResponse({
       id: record.id,

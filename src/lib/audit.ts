@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { AuditSeverity, AuditStatus } from '@prisma/client'
 import { NextRequest } from 'next/server'
+import { dispatchWebhookEvent, WebhookEvents } from '@/lib/webhooks'
 
 export const AuditActions = {
   // System & Organization
@@ -183,7 +184,7 @@ export async function logAuditEvent(params: LogAuditParams) {
     const severity = params.severity || inferAuditSeverity(params.action)
     const status = params.status || AuditStatus.SUCCESS
 
-    return await prisma.auditLog.create({
+    const createdLog = await prisma.auditLog.create({
       data: {
         userId: params.userId,
         action: params.action,
@@ -198,6 +199,21 @@ export async function logAuditEvent(params: LogAuditParams) {
         metadata: params.metadata ?? null,
       },
     })
+
+    // Kích hoạt Webhook cảnh báo an ninh cho các sự kiện CRITICAL hoặc SECURITY
+    if (severity === AuditSeverity.CRITICAL || severity === AuditSeverity.SECURITY) {
+      dispatchWebhookEvent(WebhookEvents.SECURITY_CRITICAL_ALERT, {
+        action: params.action,
+        entity: params.entity,
+        entityId: params.entityId,
+        severity,
+        userId: params.userId,
+        ipAddress: params.ipAddress,
+        time: new Date().toLocaleTimeString('vi-VN'),
+      }).catch(() => {})
+    }
+
+    return createdLog
   } catch (error) {
     console.error('Failed to write audit log event:', error)
     return null
