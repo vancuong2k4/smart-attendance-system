@@ -128,8 +128,9 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  employee Employee?
-  sessions Session[]
+  employee  Employee?
+  sessions  Session[]
+  auditLogs AuditLog[]
 }
 
 enum UserRole {
@@ -476,11 +477,24 @@ model Session {
 }
 
 // ═══════════════════════════════════════
-// AUDIT LOG
+// AUDIT LOG & SECURITY MONITORING
 // ═══════════════════════════════════════
 
+enum AuditSeverity {
+  INFO
+  WARNING
+  CRITICAL
+  SECURITY
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
 model AuditLog {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
   action    String
   entity    String
@@ -488,10 +502,18 @@ model AuditLog {
   oldData   Json?
   newData   Json?
   ipAddress String?
-  createdAt DateTime @default(now())
+  userAgent String?
+  severity  AuditSeverity @default(INFO)
+  status    AuditStatus   @default(SUCCESS)
+  metadata  Json?
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([entity, entityId])
   @@index([userId])
+  @@index([action])
+  @@index([severity])
   @@index([createdAt])
 }
 
