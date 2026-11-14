@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   X,
   Trophy,
+  ShieldAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -85,6 +86,12 @@ const navItems: NavItem[] = [
     href: '/settings',
     label: 'Cài đặt',
     icon: <Settings size={18} />,
+    roles: ['SUPER_ADMIN', 'BRANCH_ADMIN'],
+  },
+  {
+    href: '/audit-logs',
+    label: 'Nhật ký kiểm toán',
+    icon: <ShieldAlert size={18} />,
     roles: ['SUPER_ADMIN', 'BRANCH_ADMIN'],
   },
 ]
