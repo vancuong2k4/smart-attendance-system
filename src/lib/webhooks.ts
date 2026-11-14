@@ -295,18 +295,20 @@ export async function deliverWebhook(
 
   // Ghi Delivery Log vào DB an toàn
   try {
-    await prisma.webhookDeliveryLog.create({
-      data: {
-        subscriptionId: subscription.id,
-        event,
-        payload,
-        responseStatus,
-        responseBody,
-        durationMs,
-        isSuccess,
-        errorMessage,
-      },
-    })
+    if (prisma?.webhookDeliveryLog?.create) {
+      await prisma.webhookDeliveryLog.create({
+        data: {
+          subscriptionId: subscription.id,
+          event,
+          payload,
+          responseStatus,
+          responseBody,
+          durationMs,
+          isSuccess,
+          errorMessage,
+        },
+      })
+    }
   } catch (logErr) {
     console.error('Failed to save webhook delivery log:', logErr)
   }
@@ -329,6 +331,10 @@ export async function dispatchWebhookEvent(
   branchId?: string | null
 ) {
   try {
+    if (!prisma?.webhookSubscription?.findMany) {
+      return []
+    }
+
     // Tìm các subscriptions đang kích hoạt
     const subscriptions = await prisma.webhookSubscription.findMany({
       where: {

@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
         employeeCode: employee.employeeCode,
         branchName: branch.name,
         time: timeFormatted,
-        distanceMeters: Math.round(distance),
+        distanceMeters: gpsResult.distance !== undefined ? Math.round(gpsResult.distance) : 0,
         isLate: record.isLate,
         lateMinutes: record.lateMinutes,
       },
