@@ -96,6 +96,7 @@ model Branch {
   departments Department[]
   employees   Employee[]
   schedules   WorkSchedule[]
+  webhooks    WebhookSubscription[]
 
   @@unique([companyId, code])
 }
@@ -578,4 +579,57 @@ model AttendanceStreak {
   @@unique([employeeId, month, year])
   @@index([month, year, punctualityScore])
   @@index([employeeId])
+}
+
+
+// ═══════════════════════════════════════
+// WEBHOOKS & MULTI-CHANNEL NOTIFICATIONS
+// ═══════════════════════════════════════
+
+enum WebhookChannel {
+  TELEGRAM
+  DISCORD
+  GENERIC_WEBHOOK
+  ZALO_ZNS
+}
+
+model WebhookSubscription {
+  id          String         @id @default(cuid())
+  name        String
+  channel     WebhookChannel @default(GENERIC_WEBHOOK)
+  url         String
+  secret      String?
+  events      String[]
+  isActive    Boolean        @default(true)
+  branchId    String?
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  branch      Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  deliveries  WebhookDeliveryLog[]
+
+  @@index([channel])
+  @@index([isActive])
+  @@index([branchId])
+}
+
+model WebhookDeliveryLog {
+  id             String              @id @default(cuid())
+  subscriptionId String
+  event          String
+  payload        Json
+  responseStatus Int?
+  responseBody   String?
+  durationMs     Int                 @default(0)
+  isSuccess      Boolean             @default(false)
+  errorMessage   String?
+  createdAt      DateTime            @default(now())
+
+  subscription   WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([event])
+  @@index([isSuccess])
+  @@index([createdAt])
 }
