@@ -15,6 +15,7 @@ import {
   X,
   Trophy,
   ShieldAlert,
+  Webhook,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -92,6 +93,12 @@ const navItems: NavItem[] = [
     href: '/audit-logs',
     label: 'Nhật ký kiểm toán',
     icon: <ShieldAlert size={18} />,
+    roles: ['SUPER_ADMIN', 'BRANCH_ADMIN'],
+  },
+  {
+    href: '/webhooks',
+    label: 'Webhooks & Tích hợp',
+    icon: <Webhook size={18} />,
     roles: ['SUPER_ADMIN', 'BRANCH_ADMIN'],
   },
 ]
