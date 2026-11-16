@@ -57,3 +57,14 @@ redis_data/
 # Uploads
 /public/uploads/*
 !/public/uploads/attendance/.gitkeep
+
+
+# AI & Agent artifacts
+AGENTS.md
+.agents/
+.claude/
+.cursor/
+.cursorrules
+.gemini/
+.antigravity/
+*.prompt.md
