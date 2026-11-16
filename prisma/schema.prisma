@@ -178,6 +178,8 @@ model Employee {
   swapRequestsReceived ShiftSwapRequest[]     @relation("TargetEmployee")
   badges               EmployeeBadge[]
   streaks              AttendanceStreak[]
+  contracts            EmploymentContract[]
+  lifecycleEvents      LifecycleEvent[]
 }
 
 enum Gender {
@@ -632,4 +634,81 @@ model WebhookDeliveryLog {
   @@index([event])
   @@index([isSuccess])
   @@index([createdAt])
+}
+
+
+// ═══════════════════════════════════════
+// EMPLOYMENT CONTRACTS & LIFECYCLE
+// ═══════════════════════════════════════
+
+enum ContractType {
+  PROBATION
+  DEFINITE_TERM
+  INDEFINITE_TERM
+  SEASONAL
+  INTERNSHIP
+  COLLABORATOR
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRING_SOON
+  EXPIRED
+  TERMINATED
+}
+
+enum LifecycleStage {
+  ONBOARDING
+  PROBATION
+  OFFICIAL
+  PROMOTION
+  RESIGNATION_NOTICE
+  OFFBOARDED
+}
+
+model EmploymentContract {
+  id                  String         @id @default(cuid())
+  contractNumber      String         @unique
+  employeeId          String
+  contractType        ContractType   @default(PROBATION)
+  status              ContractStatus @default(ACTIVE)
+  jobTitle            String
+  signDate            DateTime
+  startDate           DateTime
+  endDate             DateTime?
+  insuranceSalary     Float          @default(0)
+  grossSalary         Float          @default(0)
+  workingHoursPerWeek Float          @default(40.0)
+  signerName          String?
+  signerRole          String?
+  fileUrl             String?
+  notes               String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  employee            Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([contractType])
+  @@index([endDate])
+}
+
+model LifecycleEvent {
+  id          String         @id @default(cuid())
+  employeeId  String
+  stage       LifecycleStage
+  title       String
+  description String?
+  eventDate   DateTime
+  metadata    Json?
+  createdById String?
+  createdAt   DateTime       @default(now())
+
+  employee    Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([stage])
+  @@index([eventDate])
 }
