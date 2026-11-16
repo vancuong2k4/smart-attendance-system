@@ -75,6 +75,7 @@ export async function GET(
     return successResponse({
       ...contract,
       status: computedStatus,
+      computedStatus,
       rawStatus: contract.status,
       daysRemaining,
       urgency,

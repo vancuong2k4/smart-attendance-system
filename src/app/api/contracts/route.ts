@@ -141,11 +141,12 @@ export async function GET(req: NextRequest) {
         contractType: c.contractType,
         contractTypeMeta: CONTRACT_TYPE_MAP[c.contractType],
         status: computedStatus,
+        computedStatus,
         rawStatus: c.status,
         jobTitle: c.jobTitle,
-        signDate: c.signDate.toISOString(),
-        startDate: c.startDate.toISOString(),
-        endDate: c.endDate ? c.endDate.toISOString() : null,
+        signDate: c.signDate instanceof Date ? c.signDate.toISOString() : c.signDate ? String(c.signDate) : null,
+        startDate: c.startDate instanceof Date ? c.startDate.toISOString() : c.startDate ? String(c.startDate) : null,
+        endDate: c.endDate instanceof Date ? c.endDate.toISOString() : c.endDate ? String(c.endDate) : null,
         daysRemaining,
         urgency,
         insuranceSalary: c.insuranceSalary,
@@ -155,8 +156,8 @@ export async function GET(req: NextRequest) {
         signerRole: c.signerRole,
         fileUrl: c.fileUrl,
         notes: c.notes,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
+        createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt ? String(c.createdAt) : new Date().toISOString(),
+        updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : c.updatedAt ? String(c.updatedAt) : new Date().toISOString(),
       }
     })
 

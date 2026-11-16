@@ -111,13 +111,13 @@ export function calculateDaysRemaining(
   if (!endDate) return null
 
   const target = new Date(endDate)
-  target.setHours(23, 59, 59, 999)
+  target.setHours(0, 0, 0, 0)
 
   const current = new Date(referenceDate)
   current.setHours(0, 0, 0, 0)
 
   const diffTime = target.getTime() - current.getTime()
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return Math.round(diffTime / (1000 * 60 * 60 * 24))
 }
 
 /**
