@@ -10,17 +10,23 @@ export const WebhookEvents = {
   LEAVE_STATUS_CHANGED: 'LEAVE_STATUS_CHANGED',
   SHIFT_SWAP_REQUESTED: 'SHIFT_SWAP_REQUESTED',
   SECURITY_CRITICAL_ALERT: 'SECURITY_CRITICAL_ALERT',
+  CONTRACT_EXPIRING: 'CONTRACT_EXPIRING',
 } as const
 
 export type WebhookEventType = (typeof WebhookEvents)[keyof typeof WebhookEvents] | string
 
 export interface WebhookEventMeta {
   label: string
-  category: 'Chấm công' | 'Nghỉ phép' | 'Ca làm việc' | 'Bảo mật'
+  category: 'Chấm công' | 'Nghỉ phép' | 'Ca làm việc' | 'Bảo mật' | 'Hợp đồng'
   description: string
 }
 
 export const WEBHOOK_EVENT_MAP: Record<string, WebhookEventMeta> = {
+  [WebhookEvents.CONTRACT_EXPIRING]: {
+    label: 'Cảnh báo hợp đồng sắp hết hạn',
+    category: 'Hợp đồng',
+    description: 'Kích hoạt khi phát hiện hợp đồng lao động sắp hết hạn cần xem xét gia hạn',
+  },
   [WebhookEvents.ATTENDANCE_CHECK_IN]: {
     label: 'Nhân viên Check-in',
     category: 'Chấm công',
