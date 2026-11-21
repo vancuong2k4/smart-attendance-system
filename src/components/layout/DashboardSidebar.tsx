@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   Webhook,
   FileSignature,
+  CalendarHeart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -76,6 +77,12 @@ const navItems: NavItem[] = [
     href: '/leaves',
     label: 'Nghỉ phép',
     icon: <FileText size={18} />,
+    roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
+  },
+  {
+    href: '/holidays',
+    label: 'Lịch nghỉ lễ & Làm bù',
+    icon: <CalendarHeart size={18} />,
     roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
   },
   {
