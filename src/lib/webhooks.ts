@@ -11,17 +11,23 @@ export const WebhookEvents = {
   SHIFT_SWAP_REQUESTED: 'SHIFT_SWAP_REQUESTED',
   SECURITY_CRITICAL_ALERT: 'SECURITY_CRITICAL_ALERT',
   CONTRACT_EXPIRING: 'CONTRACT_EXPIRING',
+  HOLIDAY_UPCOMING_REMINDER: 'HOLIDAY_UPCOMING_REMINDER',
 } as const
 
 export type WebhookEventType = (typeof WebhookEvents)[keyof typeof WebhookEvents] | string
 
 export interface WebhookEventMeta {
   label: string
-  category: 'Chấm công' | 'Nghỉ phép' | 'Ca làm việc' | 'Bảo mật' | 'Hợp đồng'
+  category: 'Chấm công' | 'Nghỉ phép' | 'Ca làm việc' | 'Bảo mật' | 'Hợp đồng' | 'Lịch nghỉ lễ'
   description: string
 }
 
 export const WEBHOOK_EVENT_MAP: Record<string, WebhookEventMeta> = {
+  [WebhookEvents.HOLIDAY_UPCOMING_REMINDER]: {
+    label: 'Thông báo lịch nghỉ lễ & làm bù',
+    category: 'Lịch nghỉ lễ',
+    description: 'Kích hoạt khi công bố hoặc nhắc nhở kỳ nghỉ lễ, ngày nghỉ công ty hoặc làm bù',
+  },
   [WebhookEvents.CONTRACT_EXPIRING]: {
     label: 'Cảnh báo hợp đồng sắp hết hạn',
     category: 'Hợp đồng',
