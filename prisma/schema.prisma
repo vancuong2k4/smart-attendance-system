@@ -97,6 +97,7 @@ model Branch {
   employees   Employee[]
   schedules   WorkSchedule[]
   webhooks    WebhookSubscription[]
+  holidays    CompanyHoliday[]
 
   @@unique([companyId, code])
 }
@@ -711,4 +712,38 @@ model LifecycleEvent {
   @@index([employeeId])
   @@index([stage])
   @@index([eventDate])
+}
+
+// ═══════════════════════════════════════
+// COMPANY HOLIDAYS & SPECIAL MULTIPLIERS
+// ═══════════════════════════════════════
+
+enum HolidayType {
+  NATIONAL          // Ngày lễ Quốc gia (hưởng nguyên lương, đi làm x3.0)
+  COMPANY           // Ngày nghỉ riêng của công ty
+  COMPENSATORY_WORK // Ngày làm việc bù
+  SPECIAL_OFF       // Ngày nghỉ đặc biệt / sự cố bất khả kháng
+}
+
+model CompanyHoliday {
+  id            String      @id @default(cuid())
+  name          String
+  code          String
+  date          DateTime
+  endDate       DateTime?
+  type          HolidayType @default(NATIONAL)
+  isPaid        Boolean     @default(true)
+  payMultiplier Float       @default(3.0)
+  year          Int
+  branchId      String?
+  description   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  branch        Branch?     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([year])
+  @@index([type])
+  @@index([branchId])
 }
